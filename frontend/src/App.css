@@ -2,7 +2,6 @@
   --verde-mesa: #0b3d24;
   --verde-mesa-oscuro: #072617;
   --dorado: #d4af37;
-  --rojo: #b3261e;
   --negro: #1c1c1c;
   --texto: #f4ead8;
   --panel: #0f4a2c;
@@ -44,7 +43,7 @@ header h1 {
   gap: 0.75rem;
 }
 
-#saldo {
+.saldo-box span {
   color: var(--dorado);
 }
 
@@ -92,16 +91,11 @@ main {
 }
 
 .tab-panel {
-  display: none;
   background: var(--panel);
   border: 1px solid var(--dorado);
   border-radius: 0 8px 8px 8px;
   padding: 1.5rem;
   max-width: 900px;
-}
-
-.tab-panel.activo {
-  display: block;
 }
 
 .tab-panel h2 {
@@ -129,7 +123,8 @@ main {
   font-size: 0.85rem;
 }
 
-input, select {
+input,
+select {
   padding: 0.4rem 0.5rem;
   border-radius: 6px;
   border: 1px solid var(--dorado);

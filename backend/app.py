@@ -1,21 +1,18 @@
 import secrets
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request
 
 from casino import dados, ruleta, simulacion, tragamonedas
 
-app = Flask(__name__, static_folder="../frontend", static_url_path="")
+# El frontend (React + Vite) corre aparte en su propio servidor de desarrollo
+# y llama a esta API vía el proxy configurado en frontend/vite.config.js.
+app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
 
 SALDO_INICIAL = 1000
 
 # Estado en memoria (un único jugador, sin base de datos: simplifica el proyecto).
 saldo_jugador = {"saldo": SALDO_INICIAL}
-
-
-@app.route("/")
-def index():
-    return send_from_directory(app.static_folder, "index.html")
 
 
 @app.route("/api/estado")
