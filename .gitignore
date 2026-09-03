@@ -1,4 +1,5 @@
 # Python
+__init__.py
 backend/venv/
 backend/__pycache__/
 backend/casino/__pycache__/
