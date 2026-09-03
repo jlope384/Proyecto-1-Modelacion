@@ -1,4 +1,17 @@
-import random
+"""
+Dados (dos dados de seis caras).
+
+Modelo de aleatoriedad: cada dado es una discreta uniforme sobre {1..6}, y se
+generan de forma independiente. La suma NO se genera directamente: se obtiene
+sumando los dos dados, así que su distribución triangular (2 con
+probabilidad 1/36, 7 con 6/36) emerge del modelo en vez de estar cableada.
+Eso permite validarla con chi-cuadrado contra la teórica.
+"""
+
+from . import rng
+
+CARAS = 6
+PROBABILIDADES_DADO = [1.0 / CARAS] * CARAS
 
 # Pago aproximado según la probabilidad real de cada suma con 2 dados,
 # para que el juego sea razonablemente "justo" (misma idea que la ruleta por número).
@@ -7,19 +20,27 @@ PAGOS_SUMA = {
     8: 6.5, 9: 8, 10: 11, 11: 17, 12: 35,
 }
 
+# Distribución teórica de la suma de dos dados (índice = suma - 2).
+PROBABILIDADES_SUMA = [
+    1 / 36, 2 / 36, 3 / 36, 4 / 36, 5 / 36, 6 / 36,
+    5 / 36, 4 / 36, 3 / 36, 2 / 36, 1 / 36,
+]
 
-def tirar():
-    d1, d2 = random.randint(1, 6), random.randint(1, 6)
+
+def tirar(generador=None):
+    gen = rng.resolver(generador)
+    d1 = 1 + gen.discreta(PROBABILIDADES_DADO)
+    d2 = 1 + gen.discreta(PROBABILIDADES_DADO)
     return d1, d2, d1 + d2
 
 
-def jugar(apuesta, tipo, valor):
+def jugar(apuesta, tipo, valor, generador=None):
     """
     tipo "suma": valor 2-12, paga según PAGOS_SUMA
     tipo "par_impar": valor "par"/"impar", paga 1:1
     Devuelve (dado1, dado2, suma, gano, ganancia_neta).
     """
-    d1, d2, suma = tirar()
+    d1, d2, suma = tirar(generador)
     gano = False
     multiplicador = 0
 
@@ -35,3 +56,17 @@ def jugar(apuesta, tipo, valor):
 
     ganancia_neta = apuesta * multiplicador if gano else -apuesta
     return d1, d2, suma, gano, ganancia_neta
+
+
+def probabilidad_teorica(tipo, valor):
+    if tipo == "suma":
+        return PROBABILIDADES_SUMA[int(valor) - 2]
+    if tipo == "par_impar":
+        return 0.5
+    raise ValueError("Tipo de apuesta inválido")
+
+
+def retorno_teorico(tipo, valor):
+    p = probabilidad_teorica(tipo, valor)
+    pago = PAGOS_SUMA[int(valor)] if tipo == "suma" else 1
+    return p * pago - (1 - p)
