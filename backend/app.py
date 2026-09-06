@@ -7,6 +7,7 @@ from casino import (
     carreras,
     dados,
     llegadas,
+    poker,
     rng,
     ruleta,
     simulacion,
@@ -29,6 +30,7 @@ saldo_jugador = {"saldo": SALDO_INICIAL}
 # salen las cartas y cómo corren los caballos.
 mesa_blackjack = blackjack.Mesa()
 hipodromo = carreras.Hipodromo()
+mesa_poker = poker.MesaPoker()
 
 
 @app.route("/api/estado")
@@ -42,10 +44,11 @@ def estado():
 
 @app.route("/api/reiniciar", methods=["POST"])
 def reiniciar():
-    global mesa_blackjack, hipodromo
+    global mesa_blackjack, hipodromo, mesa_poker
     saldo_jugador["saldo"] = SALDO_INICIAL
     mesa_blackjack = blackjack.Mesa()
     hipodromo = carreras.Hipodromo()
+    mesa_poker = poker.MesaPoker()
     return jsonify({"saldo": saldo_jugador["saldo"]})
 
 
@@ -55,7 +58,7 @@ def generador():
     Consulta o cambia el método de generación de la sesión interactiva.
     Sirve para demostrar en vivo que los dos métodos producen el mismo juego.
     """
-    global mesa_blackjack, hipodromo
+    global mesa_blackjack, hipodromo, mesa_poker
     if request.method == "POST":
         datos = request.get_json() or {}
         metodo = datos.get("metodo")
@@ -65,6 +68,7 @@ def generador():
         rng.configurar_generador(metodo=metodo, semilla=int(semilla) if semilla else None)
         mesa_blackjack = blackjack.Mesa()
         hipodromo = carreras.Hipodromo()
+        mesa_poker = poker.MesaPoker()
 
     gen = rng.generador_actual()
     return jsonify({
@@ -365,6 +369,77 @@ def carreras_validacion():
 
 
 # ---------------------------------------------------------------------------
+# Póker (Texas Hold'em) interactivo
+#
+# El humano se sienta comprando fichas con su saldo del casino y juega mano
+# tras mano contra 3 bots que deciden con equity por Monte Carlo. Como en
+# blackjack, una mano son varias decisiones: nueva -> accion* -> (showdown |
+# todos se retiran menos uno), y la mesa resuelve los turnos de los bots
+# automáticamente entre una llamada y la siguiente.
+# ---------------------------------------------------------------------------
+
+
+def _responder_poker():
+    estado_mesa = mesa_poker.estado()
+    estado_mesa["saldo"] = saldo_jugador["saldo"]
+    return jsonify(estado_mesa)
+
+
+@app.route("/api/poker/estado")
+def poker_estado():
+    return _responder_poker()
+
+
+@app.route("/api/poker/comprar", methods=["POST"])
+def poker_comprar():
+    datos = request.get_json() or {}
+    monto = float(datos.get("monto", 0))
+
+    if monto <= 0 or monto > saldo_jugador["saldo"]:
+        return jsonify({"error": "Monto inválido"}), 400
+    try:
+        mesa_poker.comprar_fichas(monto)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    saldo_jugador["saldo"] -= monto
+    return _responder_poker()
+
+
+@app.route("/api/poker/retirarse", methods=["POST"])
+def poker_retirarse():
+    try:
+        stack_final = mesa_poker.retirarse_mesa()
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    saldo_jugador["saldo"] += stack_final
+    return _responder_poker()
+
+
+@app.route("/api/poker/nueva", methods=["POST"])
+def poker_nueva():
+    try:
+        mesa_poker.nueva_mano()
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    return _responder_poker()
+
+
+@app.route("/api/poker/accion", methods=["POST"])
+def poker_accion():
+    datos = request.get_json() or {}
+    accion = datos.get("accion")
+    monto = float(datos.get("monto", 0))
+
+    if accion not in ("fold", "check", "call", "raise"):
+        return jsonify({"error": "Acción inválida. Use fold, check, call o raise"}), 400
+    try:
+        mesa_poker.actuar(accion, monto)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    return _responder_poker()
+
+
+# ---------------------------------------------------------------------------
 # Simulación
 # ---------------------------------------------------------------------------
 
@@ -387,9 +462,14 @@ def simulacion_ejecutar():
     if apuesta <= 0:
         return jsonify({"error": "Apuesta inválida"}), 400
 
-    # la carrera cuesta ~150 veces más por ronda que los otros juegos, porque
-    # cada una pone precio simulando el lote antes de correr
-    tope = simulacion.MAX_RONDAS_CARRERAS if juego == "carreras" else 100_000
+    # la carrera y el póker cuestan mucho más por ronda que los demás juegos:
+    # la carrera pone precio simulando el lote antes de correr, y el póker
+    # corre una estimación de equity por Monte Carlo en cada decisión de bot
+    tope = 100_000
+    if juego == "carreras":
+        tope = simulacion.MAX_RONDAS_CARRERAS
+    elif juego == "poker":
+        tope = simulacion.MAX_RONDAS_POKER
     if rondas <= 0 or rondas > tope:
         return jsonify({"error": f"Número de rondas inválido (máx. {tope:,})"}), 400
 

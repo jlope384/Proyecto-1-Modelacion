@@ -41,6 +41,7 @@ from . import (
     dados,
     estadistica,
     llegadas,
+    poker,
     rng,
     ruleta,
     tragamonedas,
@@ -121,6 +122,10 @@ def distribucion_teorica(juego):
         # veces, así que la marginal de la carta extraída es uniforme 1/13
         # aunque la condicional cambie tras cada extracción.
         return list(blackjack.RANGOS), [1.0 / 13.0] * 13
+    if juego == "poker":
+        # Mismo argumento que en blackjack pero sobre un solo mazo de 52: la
+        # marginal del rango de cada carta repartida es uniforme 1/13.
+        return list(poker.RANGOS), [1.0 / 13.0] * 13
     raise ValueError("Juego inválido")
 
 
@@ -138,16 +143,19 @@ def distribucion_base(juego):
         return tragamonedas.PROBABILIDADES
     if juego == "blackjack":
         return [1.0 / 13.0] * 13              # solo con el zapato completo
+    if juego == "poker":
+        return [1.0 / 13.0] * 13              # solo con el mazo completo
     raise ValueError("Juego inválido")
 
 
-# Modos de muestreo del blackjack:
-#   "iid"    -> cada carta sale de un zapato recién barajado. Las extracciones
-#               son independientes y el chi-cuadrado es válido.
-#   "zapato" -> el zapato real del juego (sin reemplazo). Es el modelo que usa
-#               la simulación, pero el chi-cuadrado deja de ser válido: ver
-#               la advertencia en `validar_juego`.
+# Modos de muestreo del blackjack y del póker:
+#   "iid"    -> cada carta sale de un zapato/mazo recién barajado. Las
+#               extracciones son independientes y el chi-cuadrado es válido.
+#   "zapato" / "mazo" -> el reparto real del juego (sin reemplazo). Es el
+#               modelo que usa la simulación, pero el chi-cuadrado deja de
+#               ser válido: ver la advertencia en `validar_juego`.
 MODOS_BLACKJACK = ("iid", "zapato")
+MODOS_POKER = ("iid", "mazo")
 
 
 def _muestrear(juego, n, generador, modo="iid"):
@@ -168,19 +176,31 @@ def _muestrear(juego, n, generador, modo="iid"):
             zapato.barajar_si_toca()
             indices.append(blackjack.RANGOS.index(zapato.sacar()))
         return indices
+    if juego == "poker":
+        if modo == "iid":
+            probabilidades = [1.0 / 13.0] * 13
+            return [generador.discreta(probabilidades) for _ in range(n)]
+        indices = []
+        mazo = poker.Mazo(generador)
+        for _ in range(n):
+            if not mazo.cartas:
+                mazo.reiniciar()
+            valor, _palo = mazo.sacar()
+            indices.append(valor - 2)
+        return indices
     raise ValueError("Juego inválido")
 
 
 ADVERTENCIA_ZAPATO = (
     "El chi-cuadrado supone extracciones independientes, y las cartas del "
-    "zapato se sacan SIN reemplazo: al agotarse un rango su probabilidad baja, "
-    "lo que hace que los conteos finales queden más parejos de lo que sería un "
-    "muestreo multinomial. El estadístico sale demasiado pequeño y los "
-    "p-valores se van cerca de 1, así que la prueba es conservadora y no "
-    "sirve para detectar un fallo del generador. Por eso la validación por "
-    "defecto usa el modo 'iid' (un zapato recién barajado por carta), donde "
-    "el supuesto sí se cumple; el modo 'zapato' se deja para mostrar "
-    "justamente ese efecto."
+    "zapato/mazo se sacan SIN reemplazo: al agotarse un rango su "
+    "probabilidad baja, lo que hace que los conteos finales queden más "
+    "parejos de lo que sería un muestreo multinomial. El estadístico sale "
+    "demasiado pequeño y los p-valores se van cerca de 1, así que la prueba "
+    "es conservadora y no sirve para detectar un fallo del generador. Por "
+    "eso la validación por defecto usa el modo 'iid' (un zapato/mazo recién "
+    "barajado por carta), donde el supuesto sí se cumple; el modo "
+    "'zapato'/'mazo' se deja para mostrar justamente ese efecto."
 )
 
 
@@ -223,10 +243,10 @@ def validar_juego(juego, n=60000, metodo="inversa", semilla=13579, modo="iid"):
         "prueba": prueba,
         "metricas": metricas,
     }
-    if juego == "blackjack":
+    if juego in ("blackjack", "poker"):
         resultado["modo"] = modo
         resultado["chi2_valido"] = modo == "iid"
-        if modo == "zapato":
+        if modo != "iid":
             resultado["advertencia"] = ADVERTENCIA_ZAPATO
     return resultado
 
@@ -420,7 +440,7 @@ def analisis_zapato_blackjack(manos=4000, semilla=4242, tramos=6):
 def comparar_todos(n=40000, semilla=13579):
     """Comparación de los dos métodos en los cuatro juegos, de un tirón."""
     comparaciones = {j: comparar_metodos(j, n, semilla) for j in
-                     ("ruleta", "dados", "tragamonedas", "blackjack")}
+                     ("ruleta", "dados", "tragamonedas", "blackjack", "poker")}
     return {
         "n_por_juego": n,
         "semilla": semilla,

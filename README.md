@@ -1,9 +1,9 @@
 # Casino - Modelación y Simulación
 
-Simulación de un casino con cinco juegos (ruleta, dados, tragamonedas,
-blackjack y carrera de caballos), un modo interactivo para jugar manualmente y
-un modo de simulación Monte Carlo para analizar el comportamiento del sistema
-a largo plazo.
+Simulación de un casino con seis juegos (ruleta, dados, tragamonedas,
+blackjack, carrera de caballos y Texas Hold'em), un modo interactivo para
+jugar manualmente y un modo de simulación Monte Carlo para analizar el
+comportamiento del sistema a largo plazo.
 
 Toda la aleatoriedad se genera con métodos implementados en el proyecto: un
 generador congruencial lineal propio como fuente uniforme, y dos métodos de
@@ -23,6 +23,8 @@ Backend en Python (Flask, solo API) + frontend en React (Vite).
 | Dados | Cara de cada dado | Discreta uniforme sobre 6 valores | Dado equilibrado. La suma **no** se genera directamente: emerge de sumar dos dados independientes, y su distribución triangular se valida contra la teórica. |
 | Tragamonedas | Símbolo de cada reel | Discreta con pesos 35/30/20/10/5 | Los reels reales tienen símbolos desbalanceados; el 7 es el más raro. Es el caso discreto desbalanceado del proyecto. |
 | Blackjack | Rango de la carta | Discreta sobre 13 rangos, **sin reemplazo** | Las cartas salen de un zapato de 6 barajas: la probabilidad de cada rango cambia después de cada extracción. |
+| Póker | Carta del mazo | Discreta sobre 52 cartas, **sin reemplazo** | Un mazo de 52 por mano; misma idea que el zapato de blackjack, pero además importa el palo (color) y no solo el rango. |
+| Póker | Decisión del bot (fold/call/raise) | Umbral sobre una equity estimada por Monte Carlo, con ruido Uniforme | Los bots no siguen una tabla fija: completan al azar las cartas que faltan `m` veces para estimar su probabilidad de ganar, la misma idea que usa `carreras.py` para ponerle precio a una carrera simulándola. |
 | Carreras | Velocidad base del caballo | Triangular(3.6, 4.0, 4.8) | La mayoría de los caballos son del montón y pocos destacan. Es el caso **continuo** del proyecto. |
 | Carreras | Forma del día | Triangular(0.55, 1, 1.45), por carrera | Absorbe lo que el modelo no representa aparte: jinete, estado de la pista, la partida, el tráfico. |
 | Carreras | Ruido de cada tranco | Triangular(0.8, 1, 1.2) | Le da textura a la carrera (adelantamientos, remontadas) sin decidir el resultado. |
@@ -58,6 +60,8 @@ backend/
     dados.py            # dos dados, suma o par/impar
     tragamonedas.py     # 3 reels con símbolos de peso desigual
     blackjack.py        # zapato, manos, estrategias y mesa interactiva
+    poker.py            # Texas Hold'em: mazo, evaluador de manos, side pots,
+                        # bots por equity Monte Carlo y mesa interactiva
     carreras.py         # caballos, cuotas por Monte Carlo, sobornos, hipódromo
     llegadas.py         # proceso de Poisson de llegadas de jugadores
     simulacion.py       # motor Monte Carlo
@@ -101,7 +105,7 @@ Levanta React en `http://localhost:5173`.
 | Método | Ruta | Qué hace |
 |---|---|---|
 | GET | `/api/estado` | Saldo y descripción del generador activo |
-| POST | `/api/reiniciar` | Devuelve el saldo a 1000 y reinicia mesa e hipódromo |
+| POST | `/api/reiniciar` | Devuelve el saldo a 1000 y reinicia mesa, hipódromo y mesa de póker |
 | GET/POST | `/api/generador` | Consulta o cambia el método (`inversa` / `aceptacion_rechazo`) y la semilla |
 
 ### Juegos
@@ -119,6 +123,26 @@ Levanta React en `http://localhost:5173`.
 El blackjack mantiene estado entre peticiones porque una mano son varias
 decisiones: `nueva` → (`pedir` \| `doblar`)* → `plantarse`. Mientras la mano
 está viva, la segunda carta del dealer viaja como `"?"`.
+
+### Póker (Texas Hold'em)
+
+| Método | Ruta | Cuerpo |
+|---|---|---|
+| GET | `/api/poker/estado` | — |
+| POST | `/api/poker/comprar` | `{monto}` — sentarse o comprar más fichas |
+| POST | `/api/poker/nueva` | — reparte la siguiente mano |
+| POST | `/api/poker/accion` | `{accion, monto}` — `accion` es `fold`/`check`/`call`/`raise`; `monto` solo aplica a `raise` y es la apuesta TOTAL de la calle, no el incremento |
+| POST | `/api/poker/retirarse` | — cash out: el stack vuelve al saldo del casino |
+
+Mesa de 4 asientos: el humano (asiento 0) contra 3 bots que deciden con
+equity por Monte Carlo (ver la tabla de fuentes de aleatoriedad). El flujo es
+`comprar` → `nueva` → (`accion`)* → showdown, y se repite con `nueva` para la
+siguiente mano. Como en blackjack, la mesa resuelve sola los turnos de los
+bots entre una llamada y la siguiente; la petición solo se detiene cuando le
+toca decidir al humano. Los bots mantienen su stack entre manos y se
+recargan solos si quedan muy cortos (son la banca de la casa, no dinero real
+del usuario), así que siempre se puede seguir probando escenarios de all-in
+y side pot.
 
 ### Carrera de caballos
 
@@ -333,5 +357,6 @@ incertidumbre.
 
 ## Pendiente
 
-El frontend todavía no tiene pestaña de blackjack, de carreras ni de
-validación: la API ya está lista para las tres, falta el componente de React.
+El frontend todavía no tiene pestaña de blackjack, de carreras, de póker ni de
+validación: la API ya está lista para las cuatro, falta el componente de
+React.

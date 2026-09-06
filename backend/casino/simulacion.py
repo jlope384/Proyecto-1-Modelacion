@@ -12,10 +12,10 @@ reproducible.
 
 import time
 
-from . import blackjack, carreras, dados, ruleta, rng, tragamonedas
+from . import blackjack, carreras, dados, poker, ruleta, rng, tragamonedas
 
 MAX_PUNTOS_HISTORIAL = 300
-JUEGOS = ("ruleta", "dados", "tragamonedas", "blackjack", "carreras")
+JUEGOS = ("ruleta", "dados", "tragamonedas", "blackjack", "carreras", "poker")
 
 # La carrera es mucho más cara que los demás juegos: cada ronda genera un lote
 # de caballos, corre `m` carreras para ponerles precio y luego corre la de
@@ -23,6 +23,13 @@ JUEGOS = ("ruleta", "dados", "tragamonedas", "blackjack", "carreras")
 # que usa el hipódromo interactivo.
 MAX_RONDAS_CARRERAS = 3000
 SIMULACIONES_CUOTA_LOTE = 250
+
+# El póker es el otro juego caro: cada mano corre una estimación de equity por
+# Monte Carlo (`poker.M_EQUITY_BOT` rollouts) por cada decisión de cada bot y
+# en cada calle, así que una ronda de simulación cuesta bastante más que una
+# tirada de ruleta o dados.
+MAX_RONDAS_POKER = 3000
+M_EQUITY_SIMULACION = 80
 
 
 def simular(juego, rondas, apuesta, tipo=None, valor=None, saldo_inicial=1000,
@@ -75,7 +82,7 @@ def simular(juego, rondas, apuesta, tipo=None, valor=None, saldo_inicial=1000,
             conteo_resultados[detalle["resultado"]] = (
                 conteo_resultados.get(detalle["resultado"], 0) + 1
             )
-        else:  # carreras
+        elif juego == "carreras":
             detalle, gano, ganancia = carreras.jugar(
                 apuesta, tipo or "favorito", valor, generador, m=m_cuotas
             )
@@ -83,6 +90,15 @@ def simular(juego, rondas, apuesta, tipo=None, valor=None, saldo_inicial=1000,
             empate = False
             conteo_resultados[detalle["estrategia"]] = (
                 conteo_resultados.get(detalle["estrategia"], 0) + 1
+            )
+        else:  # poker
+            detalle, gano, ganancia = poker.jugar_mano_automatica(
+                apuesta, generador, tipo or "equity", m_equity=M_EQUITY_SIMULACION
+            )
+            apostado = apuesta
+            empate = not gano and abs(ganancia) < 1e-9
+            conteo_resultados[detalle["motivo_fin"]] = (
+                conteo_resultados.get(detalle["motivo_fin"], 0) + 1
             )
 
         saldo += ganancia
@@ -133,6 +149,16 @@ def simular(juego, rondas, apuesta, tipo=None, valor=None, saldo_inicial=1000,
     if juego == "blackjack":
         resultado["desglose"] = conteo_resultados
         resultado["zapato"] = zapato.composicion()
+
+    if juego == "poker":
+        resultado["desglose"] = conteo_resultados
+        resultado["nota"] = (
+            "El asiento 0 juega con la estrategia elegida y los otros tres "
+            "siempre con 'equity'; con las cuatro estrategias en 'equity' el "
+            "retorno debe rondar 0, porque los cuatro asientos son "
+            "simétricos. 'azar' sirve de control: decide sin estimar equity, "
+            "igual que la estrategia 'azar' de las carreras."
+        )
 
     if juego == "carreras":
         resultado["simulaciones_cuota"] = m_cuotas
