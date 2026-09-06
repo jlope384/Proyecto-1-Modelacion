@@ -5,6 +5,7 @@ import Ruleta from "./components/Ruleta.jsx";
 import Dados from "./components/Dados.jsx";
 import Tragamonedas from "./components/Tragamonedas.jsx";
 import Simulacion from "./components/Simulacion.jsx";
+import Modelos from "./components/Modelos.jsx";
 import { api } from "./api.js";
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
         {tabActivo === "dados" && <Dados onSaldoActualizado={setSaldo} />}
         {tabActivo === "tragamonedas" && <Tragamonedas onSaldoActualizado={setSaldo} />}
         {tabActivo === "simulacion" && <Simulacion />}
+        {tabActivo === "modelos" && <Modelos />}
       </main>
     </>
   );

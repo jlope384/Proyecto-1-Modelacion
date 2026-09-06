@@ -128,7 +128,7 @@ export default function Simulacion() {
         </div>
       )}
 
-      <button onClick={ejecutar}>Ejecutar simulación 📊</button>
+      <button className="boton-primario" onClick={ejecutar}>Ejecutar simulación</button>
 
       {error && <p className="resultado perdio">{error}</p>}
 
@@ -166,15 +166,15 @@ export default function Simulacion() {
             data={datosGrafica}
             options={{
               responsive: true,
-              plugins: { legend: { labels: { color: "#f4ead8" } } },
+              plugins: { legend: { labels: { color: "#f2f2f2" } } },
               scales: {
                 x: {
-                  ticks: { color: "#f4ead8" },
-                  title: { display: true, text: "Ronda (muestreada)", color: "#f4ead8" },
+                  ticks: { color: "#f2f2f2" },
+                  title: { display: true, text: "Ronda (muestreada)", color: "#f2f2f2" },
                 },
                 y: {
-                  ticks: { color: "#f4ead8" },
-                  title: { display: true, text: "Saldo", color: "#f4ead8" },
+                  ticks: { color: "#f2f2f2" },
+                  title: { display: true, text: "Saldo", color: "#f2f2f2" },
                 },
               },
             }}

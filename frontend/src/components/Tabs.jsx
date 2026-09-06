@@ -3,6 +3,7 @@ const TABS = [
   { id: "dados", label: "Dados" },
   { id: "tragamonedas", label: "Tragamonedas" },
   { id: "simulacion", label: "Simulación" },
+  { id: "modelos", label: "La casa por dentro" },
 ];
 
 export default function Tabs({ activo, onCambiar }) {
