@@ -130,6 +130,47 @@ ETIQUETAS_METODO = {
 }
 
 
+# -- densidad y acumulada de la triangular, para generar y para validar -----
+
+
+def densidad_triangular(x, a, moda, b):
+    """f(x) de la Triangular(a, moda, b)."""
+    if x < a or x > b:
+        return 0.0
+    if x < moda:
+        return 2.0 * (x - a) / ((b - a) * (moda - a))
+    if x > moda:
+        return 2.0 * (b - x) / ((b - a) * (b - moda))
+    return 2.0 / (b - a)
+
+
+def acumulada_triangular(x, a, moda, b):
+    """F(x) de la Triangular(a, moda, b)."""
+    if x <= a:
+        return 0.0
+    if x >= b:
+        return 1.0
+    if x <= moda:
+        return (x - a) ** 2 / ((b - a) * (moda - a))
+    return 1.0 - (b - x) ** 2 / ((b - a) * (b - moda))
+
+
+def inversa_triangular(u, a, moda, b):
+    """F^-1(u) de la Triangular(a, moda, b), usada también por las pruebas."""
+    corte = (moda - a) / (b - a)
+    if u < corte:
+        return a + math.sqrt(u * (b - a) * (moda - a))
+    return b - math.sqrt((1.0 - u) * (b - a) * (b - moda))
+
+
+def media_triangular(a, moda, b):
+    return (a + moda + b) / 3.0
+
+
+def varianza_triangular(a, moda, b):
+    return (a * a + moda * moda + b * b - a * moda - a * b - moda * b) / 18.0
+
+
 class Generador:
     """
     Fachada que envuelve una fuente uniforme y genera las variables aleatorias
@@ -274,6 +315,64 @@ class Generador:
         """
         u = self.fuente.uniforme()
         return -math.log(1.0 - u) / tasa
+
+    def uniforme_continua(self, a, b):
+        """X ~ U(a, b). Un uniforme escalado; los dos métodos coinciden."""
+        self.n_variables += 1
+        return a + (b - a) * self.fuente.uniforme()
+
+    def triangular(self, a, moda, b):
+        """
+        X ~ Triangular(a, moda, b). Se usa para la velocidad de los caballos y
+        para el ruido de cada tranco.
+
+        Es el mejor caso del proyecto para comparar los dos métodos en una
+        variable CONTINUA, porque el costo teórico de aceptación-rechazo sale
+        exacto y no depende de dónde esté la moda: la densidad máxima es
+        f(moda) = 2/(b-a) y la propuesta uniforme tiene densidad 1/(b-a), así
+        que la constante de mayoración es
+
+            c = f_max / q = 2   siempre
+
+        o sea que acepta exactamente la mitad de las propuestas y gasta 4
+        uniformes por variable, contra 1 de la transformada inversa.
+        """
+        if not a <= moda <= b or a >= b:
+            raise ValueError("Se requiere a <= moda <= b con a < b.")
+        self.n_variables += 1
+        if self.metodo == "inversa":
+            return self._triangular_inversa(a, moda, b)
+        return self._triangular_aceptacion_rechazo(a, moda, b)
+
+    def _triangular_inversa(self, a, moda, b):
+        """
+        La acumulada de la triangular se invierte por tramos:
+
+            u < (moda-a)/(b-a)  ->  x = a + sqrt(u (b-a)(moda-a))
+            si no               ->  x = b - sqrt((1-u)(b-a)(b-moda))
+
+        Exacta y con costo fijo de 1 uniforme.
+        """
+        u = self.fuente.uniforme()
+        corte = (moda - a) / (b - a)
+        if u < corte:
+            return a + math.sqrt(u * (b - a) * (moda - a))
+        return b - math.sqrt((1.0 - u) * (b - a) * (b - moda))
+
+    def _triangular_aceptacion_rechazo(self, a, moda, b):
+        """
+        Propuesta uniforme en [a, b], aceptar con probabilidad f(x)/f(moda).
+        No necesita invertir nada (útil cuando la acumulada no tiene forma
+        cerrada), pero descarta la mitad de las propuestas.
+        """
+        altura = 2.0 / (b - a)  # f(moda), el máximo de la densidad
+        while True:
+            x = a + (b - a) * self.fuente.uniforme()
+            u2 = self.fuente.uniforme()
+            self.n_propuestas += 1
+            if u2 * altura <= densidad_triangular(x, a, moda, b):
+                return x
+            self.n_rechazos += 1
 
     def _exponencial_aceptacion_rechazo(self, tasa, cola=12.0):
         """

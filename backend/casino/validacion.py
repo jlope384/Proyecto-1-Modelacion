@@ -35,7 +35,16 @@ de verdad los separa es el COSTO, y por eso el criterio es de tres partes:
 
 import time
 
-from . import blackjack, dados, estadistica, llegadas, rng, ruleta, tragamonedas
+from . import (
+    blackjack,
+    carreras,
+    dados,
+    estadistica,
+    llegadas,
+    rng,
+    ruleta,
+    tragamonedas,
+)
 
 # ---------------------------------------------------------------------------
 # 1. Validación de la fuente uniforme
@@ -463,6 +472,10 @@ def reporte_completo(n_uniformes=50000, n_por_juego=30000, semilla=13579):
             ),
             "degradacion_aceptacion_rechazo": analisis_zapato_blackjack(),
         },
+        # variables continuas: la triangular de las carreras y la exponencial
+        # de las llegadas, que es donde los dos métodos se comparan fuera del
+        # terreno discreto
+        "carreras": carreras.comparar_metodos(n=n_por_juego),
         "llegadas": {
             "validacion": llegadas.validar(horas=24, repeticiones=100, metodo="inversa"),
             "comparacion": llegadas.comparar_metodos(horas=24, repeticiones=50),

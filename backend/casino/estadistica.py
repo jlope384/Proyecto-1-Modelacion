@@ -223,6 +223,52 @@ def prueba_ks_uniforme(muestra):
     }
 
 
+def prueba_ks_continua(muestra, acumulada, nombre="la distribución teórica"):
+    """
+    Kolmogorov-Smirnov contra CUALQUIER distribución continua, usando la
+    transformada integral de probabilidad: si X ~ F, entonces F(X) ~ U(0,1).
+
+    Así una sola implementación (la de uniformidad) sirve para la exponencial
+    de las llegadas y para la triangular de las carreras, sin escribir una
+    prueba distinta por distribución.
+    """
+    transformada = [acumulada(x) for x in muestra]
+    resultado = prueba_ks_uniforme(transformada)
+    resultado["prueba"] = f"Kolmogorov-Smirnov contra {nombre}"
+    resultado["hipotesis_nula"] = f"La muestra proviene de {nombre}"
+    resultado["conclusion"] = _conclusion(resultado["p_valor"], f"el ajuste a {nombre}")
+    resultado["metodo"] = "transformada integral de probabilidad"
+    return resultado
+
+
+def prueba_chi2_continua(muestra, inversa_acumulada, n_intervalos=10,
+                         nombre="la distribución teórica"):
+    """
+    Chi-cuadrado para una continua usando intervalos de IGUAL probabilidad
+    teórica (1/k cada uno). Los cortes salen de la inversa de la acumulada:
+    x_i = F^-1(i/k). Así todos los esperados valen n/k, ninguno queda por
+    debajo de 5 y no hay que agrupar las colas.
+    """
+    n = len(muestra)
+    if n < n_intervalos * 5:
+        raise ValueError("Muestra demasiado chica para ese número de intervalos.")
+    cortes = [inversa_acumulada(i / n_intervalos) for i in range(1, n_intervalos)]
+    conteos = [0] * n_intervalos
+    for x in muestra:
+        indice = 0
+        while indice < len(cortes) and x > cortes[indice]:
+            indice += 1
+        conteos[indice] += 1
+    esperados = [n / n_intervalos] * n_intervalos
+    resultado = prueba_chi2(conteos, esperados)
+    resultado["prueba"] = f"Chi-cuadrado contra {nombre} (intervalos equiprobables)"
+    resultado["hipotesis_nula"] = f"La muestra proviene de {nombre}"
+    resultado["conclusion"] = _conclusion(resultado["p_valor"], f"el ajuste a {nombre}")
+    resultado["cortes"] = cortes
+    resultado["n"] = n
+    return resultado
+
+
 def prueba_rachas(muestra):
     """
     Prueba de rachas arriba-abajo: cuenta cuántas veces la secuencia cambia

@@ -12,14 +12,21 @@ reproducible.
 
 import time
 
-from . import blackjack, dados, ruleta, rng, tragamonedas
+from . import blackjack, carreras, dados, ruleta, rng, tragamonedas
 
 MAX_PUNTOS_HISTORIAL = 300
-JUEGOS = ("ruleta", "dados", "tragamonedas", "blackjack")
+JUEGOS = ("ruleta", "dados", "tragamonedas", "blackjack", "carreras")
+
+# La carrera es mucho más cara que los demás juegos: cada ronda genera un lote
+# de caballos, corre `m` carreras para ponerles precio y luego corre la de
+# verdad. Por eso lleva su propio tope de rondas y una `m` más chica que la
+# que usa el hipódromo interactivo.
+MAX_RONDAS_CARRERAS = 3000
+SIMULACIONES_CUOTA_LOTE = 250
 
 
 def simular(juego, rondas, apuesta, tipo=None, valor=None, saldo_inicial=1000,
-            metodo="inversa", semilla=None):
+            metodo="inversa", semilla=None, m_cuotas=SIMULACIONES_CUOTA_LOTE):
     """
     Devuelve las estadísticas de la corrida más la trayectoria del saldo.
 
@@ -53,10 +60,9 @@ def simular(juego, rondas, apuesta, tipo=None, valor=None, saldo_inicial=1000,
             apostado = apuesta
             empate = False
         elif juego == "tragamonedas":
-            _, gano, ganancia = tragamonedas.jugar(apuesta, generador)
+            _, gano, ganancia, empate = tragamonedas.jugar(apuesta, generador)
             apostado = apuesta
-            empate = False
-        else:  # blackjack
+        elif juego == "blackjack":
             detalle = blackjack.jugar_mano(
                 apuesta, zapato,
                 estrategia=tipo or "basica",
@@ -68,6 +74,15 @@ def simular(juego, rondas, apuesta, tipo=None, valor=None, saldo_inicial=1000,
             empate = detalle["empate"]
             conteo_resultados[detalle["resultado"]] = (
                 conteo_resultados.get(detalle["resultado"], 0) + 1
+            )
+        else:  # carreras
+            detalle, gano, ganancia = carreras.jugar(
+                apuesta, tipo or "favorito", valor, generador, m=m_cuotas
+            )
+            apostado = apuesta
+            empate = False
+            conteo_resultados[detalle["estrategia"]] = (
+                conteo_resultados.get(detalle["estrategia"], 0) + 1
             )
 
         saldo += ganancia
@@ -119,6 +134,20 @@ def simular(juego, rondas, apuesta, tipo=None, valor=None, saldo_inicial=1000,
         resultado["desglose"] = conteo_resultados
         resultado["zapato"] = zapato.composicion()
 
+    if juego == "carreras":
+        resultado["simulaciones_cuota"] = m_cuotas
+        resultado["nota"] = (
+            "Con las cuotas puestas como (1-margen)/p, el retorno esperado es "
+            "-margen para cualquier caballo. Dos advertencias al leer este "
+            "número: (1) la desviación por carrera es enorme al apostar a "
+            "cuotas altas, así que hacen falta miles de rondas antes de "
+            "concluir algo; (2) las estrategias 'favorito' y 'tapado' eligen "
+            "el caballo POR su probabilidad estimada, y esa selección "
+            "introduce el sesgo de la maldición del ganador (ver "
+            "carreras.analisis_precision_cuotas). La estrategia 'azar' es la "
+            "única libre de ese sesgo, y es la que debe dar -margen."
+        )
+
     return resultado
 
 
@@ -135,6 +164,8 @@ def retorno_teorico(juego, tipo, valor):
             return dados.retorno_teorico(tipo, valor)
         if juego == "tragamonedas":
             return tragamonedas.retorno_teorico()
+        if juego == "carreras":
+            return carreras.retorno_teorico()
     except (ValueError, KeyError, TypeError, IndexError):
         return None
     return None

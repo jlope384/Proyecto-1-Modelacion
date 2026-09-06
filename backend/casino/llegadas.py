@@ -212,29 +212,25 @@ def validar(horas=24.0, repeticiones=200, metodo="inversa", semilla=12345):
 
 def _chi2_exponencial(muestra, tasa_teorica, n_intervalos=10):
     """
-    Chi-cuadrado para una exponencial usando intervalos de IGUAL probabilidad
-    teórica (1/n cada uno). Los cortes salen de la inversa de la acumulada:
-    x_i = -ln(1 - i/n)/tasa. Así todos los esperados valen n/k y no hay que
-    agrupar colas.
+    Chi-cuadrado de los tiempos entre llegadas contra Exp(tasa), delegando en
+    la prueba general de `estadistica` con intervalos equiprobables. La
+    inversa de la acumulada exponencial es x = -ln(1-u)/tasa.
     """
-    n = len(muestra)
-    cortes = [
-        -math.log(1.0 - i / n_intervalos) / tasa_teorica
-        for i in range(1, n_intervalos)
-    ]
-    conteos = [0] * n_intervalos
-    for x in muestra:
-        idx = 0
-        while idx < len(cortes) and x > cortes[idx]:
-            idx += 1
-        conteos[idx] += 1
-    esperados = [n / n_intervalos] * n_intervalos
-    prueba = estadistica.prueba_chi2(conteos, esperados)
+    prueba = estadistica.prueba_chi2_continua(
+        muestra,
+        lambda u: -math.log(1.0 - u) / tasa_teorica,
+        n_intervalos=n_intervalos,
+        nombre=f"Exp(lambda={tasa_teorica})",
+    )
     prueba["prueba"] = "Chi-cuadrado: tiempos entre llegadas vs Exp(lambda)"
     prueba["hipotesis_nula"] = "Los tiempos entre llegadas son exponenciales"
-    prueba["media_observada"] = sum(muestra) / n
+    prueba["media_observada"] = sum(muestra) / len(muestra)
     prueba["media_teorica"] = 1.0 / tasa_teorica
-    prueba["n"] = n
+    prueba["ks"] = estadistica.prueba_ks_continua(
+        muestra,
+        lambda x: 1.0 - math.exp(-tasa_teorica * x),
+        nombre=f"Exp(lambda={tasa_teorica})",
+    )
     return prueba
 
 
