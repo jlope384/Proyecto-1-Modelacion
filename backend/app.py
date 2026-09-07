@@ -241,6 +241,25 @@ def blackjack_doblar():
     return _responder_mesa(liquidar=True)
 
 
+@app.route("/api/blackjack/analisis-zapato", methods=["POST"])
+def blackjack_analisis_zapato():
+    """
+    Cómo se degrada aceptación-rechazo conforme se vacía el zapato.
+
+    Estaba solo dentro de /api/reporte, que corre todo el paquete de
+    validación; aquí se expone aparte para poder graficarlo en la interfaz
+    sin pagar el resto.
+    """
+    datos = request.get_json(silent=True) or {}
+    manos = int(datos.get("manos", 4000))
+    tramos = int(datos.get("tramos", 6))
+    if manos < 200 or manos > 20000:
+        return jsonify({"error": "Manos fuera de rango (200 a 20,000)"}), 400
+    if tramos < 3 or tramos > 12:
+        return jsonify({"error": "Tramos fuera de rango (3 a 12)"}), 400
+    return jsonify(validacion.analisis_zapato_blackjack(manos=manos, tramos=tramos))
+
+
 # ---------------------------------------------------------------------------
 # Carrera de caballos interactiva
 #

@@ -317,6 +317,17 @@ input[type="number"]::-webkit-outer-spin-button {
   color: var(--dorado);
 }
 
+/* anotación secundaria dentro de una estadística: el valor teórico contra el
+   que se compara, el costo del generador, la semilla usada */
+.stat small {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--texto-tenue);
+}
+
 canvas {
   background: var(--superficie);
   border: 1px solid var(--borde);
