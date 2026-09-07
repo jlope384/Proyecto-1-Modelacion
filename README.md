@@ -1,17 +1,53 @@
 # Casino - Modelación y Simulación
 
-Simulación de un casino con seis juegos (ruleta, dados, tragamonedas,
-blackjack, carrera de caballos y Texas Hold'em), un modo interactivo para
-jugar manualmente y un modo de simulación Monte Carlo para analizar el
-comportamiento del sistema a largo plazo.
+Simulación del **piso de un casino** como sistema de llegadas y salidas:
+los jugadores llegan por un proceso de Poisson no homogéneo, ocupan un
+puesto en una mesa o máquina con capacidad finita, juegan una sesión de
+rondas reales contra uno de los cuatro juegos del piso (ruleta, dados,
+tragamonedas, blackjack), y salen por quiebra, por meta de retiro, porque se
+les acabó el tiempo que pensaban quedarse, o porque abandonaron la cola por
+impaciencia. De ahí salen las cantidades de interés del sistema: tiempo
+promedio de espera, longitud de fila, y probabilidad de congestión.
 
-Toda la aleatoriedad se genera con métodos implementados en el proyecto: un
-generador congruencial lineal propio como fuente uniforme, y dos métodos de
-generación de variables aleatorias construidos sobre él (**transformada
-inversa** y **aceptación-rechazo**), que se validan estadísticamente y se
-comparan entre sí.
+Los mismos juegos (más carrera de caballos y Texas Hold'em) también se
+pueden jugar de forma interactiva, y correr sueltos en un modo de
+simulación Monte Carlo aparte del piso, para analizar la ventaja de la casa
+de cada uno a largo plazo.
+
+Toda la aleatoriedad del proyecto — llegadas, juego elegido, cartas, dados,
+números de ruleta, símbolos de reel, duraciones de sesión — se genera con
+métodos implementados en el proyecto: un generador congruencial lineal
+propio como fuente uniforme, y dos métodos de generación de variables
+aleatorias construidos sobre él (**transformada inversa** y
+**aceptación-rechazo**), que se validan estadísticamente y se comparan
+entre sí, tanto por variable individual como a nivel de todo el sistema.
 
 Backend en Python (Flask, solo API) + frontend en React (Vite).
+
+## El sistema simulado
+
+Un día de operación del piso del casino.
+
+- **Entidades:** jugadores que entran al casino.
+- **Llegadas:** proceso de Poisson no homogéneo λ(t) ([`llegadas.py`](backend/casino/llegadas.py)),
+  con el pico de 21:00 a 01:00 y el valle de madrugada.
+- **Recursos con capacidad finita** — de ahí nace la cola: 20 máquinas de tragamonedas, 2 mesas de
+  ruleta de 7 puestos, 4 mesas de blackjack de 5 puestos (cada una con su propio zapato), 1 mesa de
+  dados de 8 puestos.
+- **Servicio:** el cliente juega rondas reales contra el juego real (`ruleta.jugar`,
+  `dados.jugar`, `tragamonedas.jugar`, `blackjack.jugar_mano` — las mismas funciones del modo
+  interactivo) hasta quebrar, llegar a su meta de retiro, o agotar el tiempo que pensaba quedarse.
+- **Salidas:** quiebra, meta alcanzada, estadía agotada, o abandono de la cola por impaciencia.
+- Carrera de caballos y póker quedan **fuera** del piso a propósito: cada ronda de esos dos ya
+  corre su propio Monte Carlo interno (cotización de la carrera, equity de los bots), así que
+  meterlos aquí haría que un día simulado tardara minutos en vez de segundos. Se juegan aparte, en
+  modo interactivo.
+
+Motor: calendario de eventos con `heapq` ([`piso.py`](backend/casino/piso.py)), tal como el
+enunciado del curso autoriza explícitamente ("puede ser tan simple como generar arreglos de
+tiempos y procesarlos secuencialmente"). No hay un evento por ronda: en cuanto un cliente se
+sienta se le resuelve la sesión completa de una vez, porque el resultado no depende de nada más
+del sistema — solo el instante en que se sienta sí depende de la cola.
 
 ## Modelo
 
@@ -29,6 +65,13 @@ Backend en Python (Flask, solo API) + frontend en React (Vite).
 | Carreras | Forma del día | Triangular(0.55, 1, 1.45), por carrera | Absorbe lo que el modelo no representa aparte: jinete, estado de la pista, la partida, el tráfico. |
 | Carreras | Ruido de cada tranco | Triangular(0.8, 1, 1.2) | Le da textura a la carrera (adelantamientos, remontadas) sin decidir el resultado. |
 | Llegadas | Tiempo entre llegadas de jugadores | Exponencial / proceso de Poisson no homogéneo | Los clientes llegan de forma independiente y no simultánea; la tasa λ(t) depende de la hora (el pico es de 21:00 a 01:00). |
+| Piso | Juego que elige un cliente al llegar | Discreta con pesos 45/25/20/10 (tragamonedas/ruleta/blackjack/dados) | Las máquinas concentran el tráfico real de un casino; es el caso discreto **desbalanceado** a nivel de sistema. |
+| Piso | Bankroll con el que entra un cliente | Triangular(200, 400, 1500) | Asimétrica a la derecha: la mayoría trae poco, pocos traen mucho. |
+| Piso | Fracción del bankroll apostada por ronda | Triangular(0.02, 0.05, 0.15) | La apuesta escala con lo que el cliente trae, no es un monto fijo. |
+| Piso | Duración de una ronda de servicio | Triangular por juego (p.ej. slots ≈0.08 min, blackjack ≈1.0 min) | El servicio no es instantáneo y varía por juego; es el caso **continuo** a nivel de sistema. |
+| Piso | Paciencia de un cliente en cola | Exponencial(media 8 min) | Sin memoria: cuánto lleva esperando no cambia cuánto más aguanta, la propiedad que justifica el modelo de abandono. |
+| Piso | Meta de retiro | Triangular(1.3, 1.8, 3.0) × bankroll inicial | El cliente se retira si multiplica lo que trajo por este factor. |
+| Piso | Estadía máxima | Triangular(20, 60, 150) minutos | Nadie se queda indefinidamente, gane o pierda. |
 
 ### Métodos de generación
 
@@ -64,7 +107,9 @@ backend/
                         # bots por equity Monte Carlo y mesa interactiva
     carreras.py         # caballos, cuotas por Monte Carlo, sobornos, hipódromo
     llegadas.py         # proceso de Poisson de llegadas de jugadores
-    simulacion.py       # motor Monte Carlo
+    piso.py             # EL SISTEMA: calendario de eventos (llegadas, colas,
+                        # servicio, salidas) sobre los juegos ya existentes
+    simulacion.py       # motor Monte Carlo (rondas sueltas por juego, sin cola)
   requirements.txt
 frontend/
   src/
@@ -174,7 +219,55 @@ carrera termina: antes solo se ve la cuota.
 | POST | `/api/llegadas` \| `/api/llegadas/validacion` | `{horas, metodo, semilla}` |
 | GET/POST | `/api/reporte` | Todo el paquete de validación en una sola llamada |
 
+### El piso (sistema de llegadas y salidas)
+
+| Método | Ruta | Cuerpo |
+|---|---|---|
+| POST | `/api/piso` | `{horas, metodo, semilla}` — un día completo: KPIs, series por hora, muestra de esperas |
+| POST | `/api/piso/comparacion` | `{horas, replicas, semilla_base}` — inversa vs aceptación-rechazo, réplicas con IC 95% |
+
 ## Resultados
+
+### El piso: la cola aparece justo donde debe
+
+Un día simulado (`metodo=inversa`, `semilla=2024`): 797 llegadas, 731 atendidos, 66 abandonaron la
+cola (8.3%). Espera promedio 0.51 min, pero eso promedia horas vacías con el pico: la cola crece
+de casi 0 durante la madrugada a un promedio de 4.2 clientes esperando a las 21:00, que es
+exactamente donde λ(t) es máxima. 13.0% de los clientes atendidos tuvo que esperar (probabilidad
+de congestión). La utilización más alta es la de ruleta (54.4%, capacidad más chica relativa a su
+peso de 25%); tragamonedas y dados rondan 37%.
+
+**Chequeo de Little**, la identidad de conservación L = λ_efectiva · W: observado L = 25.85 clientes
+en el piso, estimado λ_efectiva·W = 25.70 (0.6% de diferencia) — evidencia de que el motor de
+eventos no tiene fugas de contabilidad.
+
+**Ingreso del casino** por juego coincide con la ventaja teórica donde existe forma cerrada:
+tragamonedas Q84,609 observado vs Q61,002 esperado (−4.475% de la apuesta, con la varianza propia
+de una sola corrida), ruleta Q6,251 vs Q9,950, dados ≈Q0 en ambos casos (la apuesta par/impar paga
+1:1 y es exactamente justa). Blackjack, sin forma cerrada, dio Q−1,022 en esta corrida: coherente
+con que la estrategia básica casi no le da ventaja a la casa (ver más abajo).
+
+### La comparación de métodos coincide donde debe y difiere donde debe
+
+12 réplicas de un día completo con cada método, misma semilla por réplica (`semilla_base=777`,
+tabla con 8 réplicas por brevedad):
+
+| Métrica | Transformada inversa | Aceptación-rechazo |
+|---|---|---|
+| Espera en cola (IC 95%) | 0.60 min [0.52, 0.68] | 0.55 min [0.46, 0.65] |
+| Clientes en cola (IC 95%) | 0.49 [0.43, 0.55] | 0.45 [0.39, 0.51] |
+| Ingreso del casino (IC 95%) | Q99,765 [77,040, 122,491] | Q85,884 [63,236, 108,532] |
+| Uniformes por cliente atendido | 919 | 3,307 (**3.6× más**) |
+| Tasa de rechazo | 0% | 44.5% |
+| Segundos por día simulado | 0.64 | 1.16 |
+
+Los intervalos de confianza de espera, cola e ingreso se solapan ampliamente entre métodos: es la
+evidencia de que ambos generan de la misma distribución y el método de generación no cambia las
+conclusiones sobre el sistema. Lo que sí cambia, y de forma marcada, es el costo: con el mix de
+juegos desbalanceado (45/25/20/10) y las duraciones de ronda concentradas en tragamonedas,
+aceptación-rechazo gasta 3.6 veces más uniformes por cliente y descarta 44.5% de sus propuestas.
+Ese es el criterio de comparación propuesto — costo por variable generada a igualdad de resultado
+estadístico — y la evidencia que lo sustenta.
 
 ### El LCG propio es utilizable
 
@@ -357,6 +450,8 @@ incertidumbre.
 
 ## Pendiente
 
-El frontend todavía no tiene pestaña de blackjack, de carreras, de póker ni de
-validación: la API ya está lista para las cuatro, falta el componente de
-React.
+Carrera de caballos y póker no forman parte del piso (ver "El sistema simulado"): cada ronda de
+esos dos ya corre su propio Monte Carlo interno, así que incluirlos alargaría un día simulado de
+segundos a minutos. Si se quisiera integrarlos habría que acotar `m` (carreras) y
+`M_EQUITY_SIMULACION` (póker) específicamente para el piso, más agresivamente que en
+`simulacion.py`.

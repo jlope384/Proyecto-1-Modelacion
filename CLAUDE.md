@@ -4,10 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A casino simulation used to study random-variable generation methods: five games (ruleta, dados,
-tragamonedas, blackjack, carrera de caballos), an interactive mode to play them manually, and a Monte
-Carlo simulation mode to analyze long-run behavior. Backend is Python/Flask (API only), frontend is
-React/Vite. All prose, identifiers, and API fields are in Spanish — match that when adding code.
+A casino simulation used to study random-variable generation methods. The centerpiece is **the
+floor** (`backend/casino/piso.py`): a discrete-event system where players arrive via a
+non-homogeneous Poisson process, queue for a finite-capacity resource (slots/roulette/blackjack/
+dice), get served by playing real rounds of that game, and depart by busting, hitting a cashout
+goal, running out of patience in the queue, or running out of time. That's what turns "a bunch of
+casino games" into the arrivals-and-departures system the course project asks for — see the
+README's "El sistema simulado" section. Six games exist in total (ruleta, dados, tragamonedas,
+blackjack, carrera de caballos, Texas Hold'em); only the first four are part of the floor (see
+`piso.py`'s docstring for why carreras/poker are excluded). All six can also be played
+interactively or run standalone through the Monte Carlo simulation mode (`simulacion.py`), which
+estimates house-edge/odds per game and does **not** model queueing — that's the floor's job.
+Backend is Python/Flask (API only), frontend is React/Vite. All prose, identifiers, and API fields
+are in Spanish — match that when adding code.
 
 The core point of the project is methodological: **all randomness flows through a custom-built stack**,
 never through `random`/`numpy`. See `backend/casino/rng.py`'s module docstring for the two-layer design
@@ -88,6 +97,15 @@ Blackjack and carreras are stateful across multiple requests (a hand/race is sev
 See the README's "API" section for the full endpoint list and request bodies — it's kept up to date and
 shouldn't be duplicated here.
 
+`piso.py` is the system layer: an event calendar built on stdlib `heapq` (arrival / end-of-service /
+queue-abandonment events), sitting on top of the existing game modules rather than reimplementing
+them — a floor customer's session is resolved by calling the real `ruleta.jugar` / `dados.jugar` /
+`tragamonedas.jugar` / `blackjack.jugar_mano`. It reuses `llegadas.py` for arrivals and only adds
+new *parameters* (bankroll, bet fraction, session duration, queue patience — all `Generador.triangular`
+/ `.exponencial` draws), no new RNG methods. Keep it that way: if a floor tweak needs a new kind of
+random draw, it almost certainly belongs in `rng.py` as a third case of an existing method, not as
+a one-off `random.random()` call in `piso.py`.
+
 ### Frontend: tab-per-game, saldo lifted to the top
 
 `App.jsx` owns `saldo` (fetched once from `/api/estado`) and the active tab; each game component
@@ -95,12 +113,15 @@ receives `onSaldoActualizado` and calls it with whatever saldo the play endpoint
 thin fetch wrapper that throws on non-OK responses using the JSON body's `error` field — game components
 catch that and render it as the result message.
 
-The frontend currently only has tabs for ruleta, dados, tragamonedas, and simulación — blackjack and
-carreras have full backend APIs but no React components yet (`Tabs.jsx` / `App.jsx` don't route to them).
-When adding one, follow the existing pattern in e.g. `Ruleta.jsx` or `Dados.jsx`: local state for
-bet inputs, a `jugar()` that POSTs and updates saldo + a `resultado` message, styled via the shared
-classes in `App.css` (`.tab-panel`, `.form-fila`, `.resultado.gano`/`.perdio`) rather than new one-off
-CSS.
+The frontend has a tab per game (`Ruleta.jsx`, `Dados.jsx`, `Tragamonedas.jsx`, `Blackjack.jsx`,
+`Carreras.jsx`, `Poker.jsx`) plus `Simulacion.jsx` (Monte Carlo), `Modelos.jsx` (RNG validation —
+"La casa por dentro") and `Piso.jsx` (the system: KPIs, queues, method comparison — "El piso",
+the default/first tab). When adding a game tab, follow the pattern in e.g. `Ruleta.jsx` or
+`Dados.jsx`: local state for bet inputs, a `jugar()` that POSTs and updates saldo + a `resultado`
+message. When adding a data/analysis tab, follow `Modelos.jsx` or `Piso.jsx` instead: no saldo,
+just controls + `stats-grid` + charts. Either way, style via the shared classes in `App.css`
+(`.tab-panel`, `.form-fila`, `.resultado.gano`/`.perdio`, `.stats-grid`, `.grafica-caja`/`.grafica-par`)
+rather than new one-off CSS.
 
 `Ruleta.jsx`'s wheel is a pure-CSS `conic-gradient` disc (37 real wedges in true physical wheel order,
 see `NUMEROS_DISCO`) with the ball animated via a separately-rotating track element and React state

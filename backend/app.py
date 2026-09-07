@@ -7,6 +7,7 @@ from casino import (
     carreras,
     dados,
     llegadas,
+    piso,
     poker,
     rng,
     ruleta,
@@ -604,6 +605,41 @@ def llegadas_validacion():
         "validacion": llegadas.validar(horas, repeticiones, metodo),
         "comparacion": llegadas.comparar_metodos(horas, max(10, repeticiones // 4)),
     })
+
+
+# ---------------------------------------------------------------------------
+# El piso del casino (sistema de llegadas y salidas)
+# ---------------------------------------------------------------------------
+
+
+@app.route("/api/piso", methods=["POST"])
+def piso_simular():
+    datos = request.get_json() or {}
+    horas = float(datos.get("horas", 24))
+    metodo = datos.get("metodo", "inversa")
+    semilla = datos.get("semilla")
+
+    if metodo not in rng.METODOS:
+        return jsonify({"error": f"Método inválido. Use uno de {rng.METODOS}"}), 400
+    if horas <= 0 or horas > 24 * 7:
+        return jsonify({"error": "Horas fuera de rango (0 a 168)"}), 400
+
+    return jsonify(piso.simular_dia(horas, metodo, semilla=int(semilla) if semilla else None))
+
+
+@app.route("/api/piso/comparacion", methods=["POST"])
+def piso_comparacion():
+    datos = request.get_json() or {}
+    horas = float(datos.get("horas", 24))
+    replicas = int(datos.get("replicas", 12))
+    semilla_base = int(datos.get("semilla_base", 90210))
+
+    if horas <= 0 or horas > 24 * 7:
+        return jsonify({"error": "Horas fuera de rango (0 a 168)"}), 400
+    if replicas < 2 or replicas > 30:
+        return jsonify({"error": "Réplicas fuera de rango (2 a 30)"}), 400
+
+    return jsonify(piso.comparar_metodos(horas, replicas, semilla_base))
 
 
 @app.route("/api/reporte", methods=["GET", "POST"])

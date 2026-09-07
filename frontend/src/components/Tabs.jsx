@@ -1,4 +1,5 @@
 const TABS = [
+  { id: "piso", label: "El piso" },
   { id: "ruleta", label: "Ruleta" },
   { id: "dados", label: "Dados" },
   { id: "tragamonedas", label: "Tragamonedas" },
