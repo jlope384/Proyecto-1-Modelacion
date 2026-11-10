@@ -1,0 +1,125 @@
+{
+ "abandonos": 75,
+ "apostado_por_juego": {
+  "blackjack": 373926.980609342,
+  "dados": 136048.94659761,
+  "ruleta": 385342.593437351,
+  "tragamonedas": 1382321.6754026762
+ },
+ "atendidos": 680,
+ "clientes_promedio_cola": {
+  "blackjack": 0.0,
+  "dados": 0.04020477727291889,
+  "ruleta": 0.2117836309040503,
+  "tragamonedas": 0.11494849773077896
+ },
+ "clientes_promedio_sistema": 24.21461224706221,
+ "espera_promedio_min": 0.4757461803010828,
+ "etiqueta_metodo": "Transformada inversa",
+ "horas": 24,
+ "ingreso_por_juego": {
+  "blackjack": -2478.9192586795457,
+  "dados": -4022.7535259941396,
+  "ruleta": 12677.27185495519,
+  "tragamonedas": 102610.84102141672
+ },
+ "ingreso_teorico_por_juego": {
+  "dados": -0.0,
+  "ruleta": 10414.664687495952,
+  "tragamonedas": 61858.89497426974
+ },
+ "ingreso_total": 108786.44009169823,
+ "little": {
+  "L_estimado_por_little": 24.05746132885024,
+  "L_observado": 24.21461224706221,
+  "lambda_efectiva": 26.457720067829957
+ },
+ "llegadas_totales": 755,
+ "metodo": "inversa",
+ "metricas_generador": {
+  "etiqueta": "Transformada inversa",
+  "metodo": "inversa",
+  "propuestas": 0,
+  "rechazos": 0,
+  "tasa_rechazo": 0.0,
+  "uniformes_consumidos": 616068,
+  "uniformes_por_variable": 1.0,
+  "variables_generadas": 616068
+ },
+ "motivos_fin": {
+  "estadia": 348,
+  "meta": 109,
+  "quiebra": 223
+ },
+ "pesos_juego": {
+  "blackjack": 0.2,
+  "dados": 0.1,
+  "ruleta": 0.25,
+  "tragamonedas": 0.45
+ },
+ "prob_abandono": 0.09933774834437085,
+ "prob_congestion": 0.1161764705882353,
+ "recursos": {
+  "blackjack": {
+   "capacidad_total": 20,
+   "mesas": 4,
+   "puestos_por_mesa": 5
+  },
+  "dados": {
+   "capacidad_total": 8,
+   "mesas": 1,
+   "puestos_por_mesa": 8
+  },
+  "ruleta": {
+   "capacidad_total": 14,
+   "mesas": 2,
+   "puestos_por_mesa": 7
+  },
+  "tragamonedas": {
+   "capacidad_total": 20,
+   "mesas": 20,
+   "puestos_por_mesa": 1
+  }
+ },
+ "rondas_por_juego": {
+  "blackjack": 7647,
+  "dados": 2720,
+  "ruleta": 8211,
+  "tragamonedas": 104012
+ },
+ "semilla": 1,
+ "tasa_por_hora": [
+  45,
+  30,
+  18,
+  10,
+  6,
+  4,
+  4,
+  6,
+  10,
+  14,
+  18,
+  24,
+  30,
+  32,
+  30,
+  28,
+  32,
+  40,
+  50,
+  62,
+  75,
+  90,
+  85,
+  65
+ ],
+ "tiempo_sistema_promedio_min": 54.55676740212049,
+ "tiempo_total_horas": 25.701383122078408,
+ "utilizacion": {
+  "blackjack": 0.2885777989142658,
+  "dados": 0.38302371737869,
+  "ruleta": 0.5420683404183437,
+  "tragamonedas": 0.3711486428991408
+ }
+}
