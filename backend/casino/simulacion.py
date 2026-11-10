@@ -12,28 +12,14 @@ reproducible.
 
 import time
 
-from . import blackjack, carreras, dados, poker, ruleta, rng, tragamonedas
+from . import blackjack, dados, ruleta, rng, tragamonedas
 
 MAX_PUNTOS_HISTORIAL = 300
-JUEGOS = ("ruleta", "dados", "tragamonedas", "blackjack", "carreras", "poker")
-
-# La carrera es mucho más cara que los demás juegos: cada ronda genera un lote
-# de caballos, corre `m` carreras para ponerles precio y luego corre la de
-# verdad. Por eso lleva su propio tope de rondas y una `m` más chica que la
-# que usa el hipódromo interactivo.
-MAX_RONDAS_CARRERAS = 3000
-SIMULACIONES_CUOTA_LOTE = 250
-
-# El póker es el otro juego caro: cada mano corre una estimación de equity por
-# Monte Carlo (`poker.M_EQUITY_BOT` rollouts) por cada decisión de cada bot y
-# en cada calle, así que una ronda de simulación cuesta bastante más que una
-# tirada de ruleta o dados.
-MAX_RONDAS_POKER = 3000
-M_EQUITY_SIMULACION = 80
+JUEGOS = ("ruleta", "dados", "tragamonedas", "blackjack")
 
 
 def simular(juego, rondas, apuesta, tipo=None, valor=None, saldo_inicial=1000,
-            metodo="inversa", semilla=None, m_cuotas=SIMULACIONES_CUOTA_LOTE):
+            metodo="inversa", semilla=None):
     """
     Devuelve las estadísticas de la corrida más la trayectoria del saldo.
 
@@ -81,24 +67,6 @@ def simular(juego, rondas, apuesta, tipo=None, valor=None, saldo_inicial=1000,
             empate = detalle["empate"]
             conteo_resultados[detalle["resultado"]] = (
                 conteo_resultados.get(detalle["resultado"], 0) + 1
-            )
-        elif juego == "carreras":
-            detalle, gano, ganancia = carreras.jugar(
-                apuesta, tipo or "favorito", valor, generador, m=m_cuotas
-            )
-            apostado = apuesta
-            empate = False
-            conteo_resultados[detalle["estrategia"]] = (
-                conteo_resultados.get(detalle["estrategia"], 0) + 1
-            )
-        else:  # poker
-            detalle, gano, ganancia = poker.jugar_mano_automatica(
-                apuesta, generador, tipo or "equity", m_equity=M_EQUITY_SIMULACION
-            )
-            apostado = apuesta
-            empate = not gano and abs(ganancia) < 1e-9
-            conteo_resultados[detalle["motivo_fin"]] = (
-                conteo_resultados.get(detalle["motivo_fin"], 0) + 1
             )
 
         saldo += ganancia
@@ -150,30 +118,6 @@ def simular(juego, rondas, apuesta, tipo=None, valor=None, saldo_inicial=1000,
         resultado["desglose"] = conteo_resultados
         resultado["zapato"] = zapato.composicion()
 
-    if juego == "poker":
-        resultado["desglose"] = conteo_resultados
-        resultado["nota"] = (
-            "El asiento 0 juega con la estrategia elegida y los otros tres "
-            "siempre con 'equity'; con las cuatro estrategias en 'equity' el "
-            "retorno debe rondar 0, porque los cuatro asientos son "
-            "simétricos. 'azar' sirve de control: decide sin estimar equity, "
-            "igual que la estrategia 'azar' de las carreras."
-        )
-
-    if juego == "carreras":
-        resultado["simulaciones_cuota"] = m_cuotas
-        resultado["nota"] = (
-            "Con las cuotas puestas como (1-margen)/p, el retorno esperado es "
-            "-margen para cualquier caballo. Dos advertencias al leer este "
-            "número: (1) la desviación por carrera es enorme al apostar a "
-            "cuotas altas, así que hacen falta miles de rondas antes de "
-            "concluir algo; (2) las estrategias 'favorito' y 'tapado' eligen "
-            "el caballo POR su probabilidad estimada, y esa selección "
-            "introduce el sesgo de la maldición del ganador (ver "
-            "carreras.analisis_precision_cuotas). La estrategia 'azar' es la "
-            "única libre de ese sesgo, y es la que debe dar -margen."
-        )
-
     return resultado
 
 
@@ -190,8 +134,6 @@ def retorno_teorico(juego, tipo, valor):
             return dados.retorno_teorico(tipo, valor)
         if juego == "tragamonedas":
             return tragamonedas.retorno_teorico()
-        if juego == "carreras":
-            return carreras.retorno_teorico()
     except (ValueError, KeyError, TypeError, IndexError):
         return None
     return None

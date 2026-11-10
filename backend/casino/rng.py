@@ -323,8 +323,8 @@ class Generador:
 
     def triangular(self, a, moda, b):
         """
-        X ~ Triangular(a, moda, b). Se usa para la velocidad de los caballos y
-        para el ruido de cada tranco.
+        X ~ Triangular(a, moda, b). En el piso se usa para bankroll, apuesta,
+        duración de ronda y estadía de cada cliente.
 
         Es el mejor caso del proyecto para comparar los dos métodos en una
         variable CONTINUA, porque el costo teórico de aceptación-rechazo sale

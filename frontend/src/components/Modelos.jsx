@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bar, Line } from "react-chartjs-2";
+import { Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -16,9 +16,7 @@ ChartJS.register(
   CategoryScale, LinearScale, BarElement, PointElement, LineElement, Tooltip, Legend
 );
 
-// La carrera va aparte porque su variable base es CONTINUA (triangular) y se
-// valida con otro endpoint; las demás son discretas y pasan por /api/comparacion.
-const JUEGOS_DISCRETOS = ["ruleta", "dados", "tragamonedas", "blackjack", "poker"];
+const JUEGOS_DISCRETOS = ["ruleta", "dados", "tragamonedas", "blackjack"];
 
 const EJES = {
   ticks: { color: "#f2f2f2" },
@@ -85,38 +83,11 @@ export default function Modelos() {
   async function compararMetodos() {
     setCargandoComp(true);
     try {
-      let r;
-      if (juegoComp === "carreras") {
-        // caso continuo: la triangular se valida con chi-cuadrado de
-        // intervalos equiprobables y KS, no con el chi-cuadrado discreto
-        const bruto = await api("/api/carreras/validacion", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ n: Number(nComp) }),
-        });
-        r = {
-          continuo: true,
-          resultados: bruto.resultados.map((f) => ({
-            etiqueta_metodo: f.etiqueta_metodo,
-            prueba: f.chi2,
-            ks: f.ks,
-            metricas: f.metricas,
-          })),
-          veredicto: {
-            ...bruto.veredicto,
-            mas_rapido:
-              bruto.veredicto.razon_tiempo >= 1 ? "inversa" : "aceptacion_rechazo",
-          },
-          costo_teorico_aceptacion_rechazo:
-            bruto.resultados[0].costo_teorico_aceptacion_rechazo,
-        };
-      } else {
-        r = await api("/api/comparacion", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ juego: juegoComp, n: Number(nComp) }),
-        });
-      }
+      const r = await api("/api/comparacion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ juego: juegoComp, n: Number(nComp) }),
+      });
       setComparacion(r);
       setErrorComp(null);
     } catch (e) {
@@ -181,79 +152,6 @@ export default function Modelos() {
       setCargandoBj(false);
     }
   }
-
-  // --------------------------------------------------------- 5. carreras
-  const [crLotes, setCrLotes] = useState(40);
-  const [crSesgo, setCrSesgo] = useState(null);
-  const [crSoborno, setCrSoborno] = useState(null);
-  const [errorCr, setErrorCr] = useState(null);
-  const [cargandoCr, setCargandoCr] = useState(false);
-
-  async function analizarCarreras() {
-    setCargandoCr(true);
-    try {
-      const [sesgo, soborno] = await Promise.all([
-        api("/api/carreras/precision-cuotas", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lotes: Number(crLotes), m_referencia: 1500 }),
-        }),
-        api("/api/carreras/soborno/analisis", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ repeticiones: 250, apuesta: 100 }),
-        }),
-      ]);
-      setCrSesgo(sesgo);
-      setCrSoborno(soborno);
-      setErrorCr(null);
-    } catch (e) {
-      setErrorCr(e.message);
-      setCrSesgo(null);
-      setCrSoborno(null);
-    } finally {
-      setCargandoCr(false);
-    }
-  }
-
-  // ----------------------------------------------------------- 6. póker
-  const [pkManos, setPkManos] = useState(120);
-  const [pkEquity, setPkEquity] = useState(null);
-  const [pkAzar, setPkAzar] = useState(null);
-  const [errorPk, setErrorPk] = useState(null);
-  const [cargandoPk, setCargandoPk] = useState(false);
-
-  async function analizarPoker() {
-    setCargandoPk(true);
-    try {
-      const cuerpo = (tipo) => ({
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          juego: "poker",
-          rondas: Number(pkManos),
-          apuesta: 10,
-          tipo,
-          semilla: 2024,
-        }),
-      });
-      const [eq, az] = await Promise.all([
-        api("/api/simulacion", cuerpo("equity")),
-        api("/api/simulacion", cuerpo("azar")),
-      ]);
-      setPkEquity(eq);
-      setPkAzar(az);
-      setErrorPk(null);
-    } catch (e) {
-      setErrorPk(e.message);
-      setPkEquity(null);
-      setPkAzar(null);
-    } finally {
-      setCargandoPk(false);
-    }
-  }
-
-  const minutosPoker = Math.round((Number(pkManos) * 2 * 124) / 1000);
 
   return (
     <section className="tab-panel">
@@ -333,8 +231,7 @@ export default function Modelos() {
       <p className="ayuda">
         La casa puede generar el resultado de cada juego de dos maneras distintas — transformada
         inversa o aceptación-rechazo — y las dos son igual de justas. Elegí un juego y comprobá cuál
-        le sale más barata. El póker y el blackjack reparten sin reemplazo; la carrera es el único
-        caso continuo, con la velocidad de cada caballo saliendo de una triangular.
+        le sale más barata.
       </p>
       <div className="form-fila">
         <label>
@@ -343,7 +240,6 @@ export default function Modelos() {
             {JUEGOS_DISCRETOS.map((j) => (
               <option key={j} value={j}>{j}</option>
             ))}
-            <option value="carreras">carreras (continuo)</option>
           </select>
         </label>
         <label>
@@ -414,7 +310,6 @@ export default function Modelos() {
                 <span className="stat-label">{r.etiqueta_metodo}</span>
                 <span>
                   chi² p = {r.prueba.p_valor.toFixed(4)}
-                  {r.ks && <small> · KS p = {r.ks.p_valor.toFixed(4)}</small>}
                   <small> · {r.metricas.microsegundos_por_variable.toFixed(2)} µs/variable</small>
                 </span>
               </div>
@@ -561,187 +456,6 @@ export default function Modelos() {
         </>
       )}
 
-      {/* ------------------------------------------------ 5 */}
-      <h3>5. Carreras: poner precio simulando, y el sesgo que eso trae</h3>
-      <p className="ayuda">
-        La casa no conoce la probabilidad de cada caballo: la estima corriendo la carrera m veces y
-        fija la cuota como (1−margen)/p. Pero el favorito es, por definición, el caballo con la p
-        estimada más alta, así que se lo elige junto con su error: su cuota queda corta. Apostar al
-        azar no tiene ese sesgo, y por eso sirve de control.
-      </p>
-      <div className="form-fila">
-        <label>
-          Lotes por valor de m
-          <input
-            type="number"
-            min="10"
-            max="200"
-            value={crLotes}
-            onChange={(e) => setCrLotes(e.target.value)}
-          />
-        </label>
-        <button onClick={analizarCarreras} disabled={cargandoCr}>
-          {cargandoCr ? "Simulando…" : "Analizar carreras"}
-        </button>
-      </div>
-      {cargandoCr && (
-        <p className="ayuda">
-          Esto corre muchas carreras completas: puede tardar un minuto o más.
-        </p>
-      )}
-      {errorCr && <p className="resultado perdio">{errorCr}</p>}
-      {crSesgo && (
-        <>
-          <p className="ayuda">{crSesgo.lectura}</p>
-          <Grafica>
-            <Line
-              data={{
-                labels: crSesgo.resultados.map((f) => `m = ${f.m}`),
-                datasets: [
-                  {
-                    label: "Favorito",
-                    data: crSesgo.resultados.map((f) => f.favorito.sesgo_p),
-                    borderColor: "#ff8a80",
-                    backgroundColor: ROJO,
-                    tension: 0.2,
-                  },
-                  {
-                    label: "Tapado",
-                    data: crSesgo.resultados.map((f) => f.tapado.sesgo_p),
-                    borderColor: "#d4af37",
-                    backgroundColor: ORO,
-                    tension: 0.2,
-                  },
-                  {
-                    label: "Azar (control)",
-                    data: crSesgo.resultados.map((f) => f.azar.sesgo_p),
-                    borderColor: "#6bd66b",
-                    backgroundColor: VERDE,
-                    tension: 0.2,
-                  },
-                ],
-              }}
-              options={opciones("p estimada por la casa − p de referencia")}
-            />
-          </Grafica>
-        </>
-      )}
-      {crSoborno && (
-        <>
-          <p className="ayuda">{crSoborno.lectura}</p>
-          <Grafica>
-            <Bar
-              data={{
-                labels: crSoborno.resultados.map((f) => f.escenario),
-                datasets: [
-                  {
-                    label: "Retorno sobre la apuesta (%)",
-                    data: crSoborno.resultados.map((f) => f.retorno_sobre_apuesta * 100),
-                    backgroundColor: crSoborno.resultados.map((f) =>
-                      f.retorno_sobre_apuesta > 0 ? VERDE : ROJO
-                    ),
-                  },
-                ],
-              }}
-              options={opciones("Retorno sobre la apuesta (%)")}
-            />
-          </Grafica>
-          <div className="stats-grid">
-            {crSoborno.resultados.map((f) => (
-              <div key={f.escenario} className="stat">
-                <span className="stat-label">
-                  {f.escenario}
-                  {f.costo_soborno > 0 && ` (costo ${f.costo_soborno})`}
-                </span>
-                <span>
-                  {pct(f.retorno_sobre_apuesta, 1)}
-                  <small>
-                    {" "}· IC95 [{pct(f.ic95_retorno[0], 1)}, {pct(f.ic95_retorno[1], 1)}]
-                    {f.difiere_del_nominal ? " · difiere del nominal" : " · no difiere del nominal"}
-                  </small>
-                </span>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* ------------------------------------------------ 6 */}
-      <h3>6. Póker: aquí la simulación no reparte, decide</h3>
-      <p className="ayuda">
-        En los otros cinco juegos el azar solo determina el resultado. En póker además alimenta la
-        decisión: cada bot estima su equity completando al azar las cartas que faltan y la compara
-        contra las pot odds. Para comprobar que esa señal sirve de algo, se enfrenta un asiento que
-        la usa contra uno que decide sin estimar nada.
-      </p>
-      <div className="form-fila">
-        <label>
-          Manos por escenario
-          <input
-            type="number"
-            min="20"
-            max="1000"
-            value={pkManos}
-            onChange={(e) => setPkManos(e.target.value)}
-          />
-        </label>
-        <button onClick={analizarPoker} disabled={cargandoPk}>
-          {cargandoPk ? "Simulando…" : "Enfrentar equity contra azar"}
-        </button>
-      </div>
-      <p className="ayuda">
-        Son dos corridas de {pkManos} manos y cada decisión dispara una estimación por Monte Carlo:
-        calculá unos {minutosPoker} segundos.
-      </p>
-      {errorPk && <p className="resultado perdio">{errorPk}</p>}
-      {pkEquity && pkAzar && (
-        <>
-          <Veredicto ok={pkEquity.retorno_sobre_apuesta > pkAzar.retorno_sobre_apuesta}>
-            El asiento que estima equity rinde {pct(pkEquity.retorno_sobre_apuesta)} y el que decide
-            al azar {pct(pkAzar.retorno_sobre_apuesta)}. Con cuatro asientos simétricos el retorno
-            debería rondar cero; la brecha es lo que cuesta ignorar la señal de equity.
-          </Veredicto>
-          <div className="grafica-par">
-            <Grafica>
-              <Bar
-                data={{
-                  labels: ["Equity (Monte Carlo)", "Azar (control)"],
-                  datasets: [
-                    {
-                      label: "Retorno sobre lo apostado (%)",
-                      data: [
-                        pkEquity.retorno_sobre_apuesta * 100,
-                        pkAzar.retorno_sobre_apuesta * 100,
-                      ],
-                      backgroundColor: [VERDE, ROJO],
-                    },
-                  ],
-                }}
-                options={opciones("Retorno sobre lo apostado (%)")}
-              />
-            </Grafica>
-            <Grafica>
-              <Bar
-                data={{
-                  labels: ["Equity (Monte Carlo)", "Azar (control)"],
-                  datasets: [
-                    {
-                      label: "Manos ganadas (%)",
-                      data: [
-                        pkEquity.prob_victoria * 100,
-                        pkAzar.prob_victoria * 100,
-                      ],
-                      backgroundColor: [VERDE, ROJO],
-                    },
-                  ],
-                }}
-                options={opciones("% de manos ganadas")}
-              />
-            </Grafica>
-          </div>
-          <p className="ayuda">{pkEquity.nota}</p>
-        </>
-      )}
     </section>
   );
 }

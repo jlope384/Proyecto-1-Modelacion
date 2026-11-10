@@ -37,11 +37,9 @@ import time
 
 from . import (
     blackjack,
-    carreras,
     dados,
     estadistica,
     llegadas,
-    poker,
     rng,
     ruleta,
     tragamonedas,
@@ -122,10 +120,6 @@ def distribucion_teorica(juego):
         # veces, así que la marginal de la carta extraída es uniforme 1/13
         # aunque la condicional cambie tras cada extracción.
         return list(blackjack.RANGOS), [1.0 / 13.0] * 13
-    if juego == "poker":
-        # Mismo argumento que en blackjack pero sobre un solo mazo de 52: la
-        # marginal del rango de cada carta repartida es uniforme 1/13.
-        return list(poker.RANGOS), [1.0 / 13.0] * 13
     raise ValueError("Juego inválido")
 
 
@@ -143,19 +137,16 @@ def distribucion_base(juego):
         return tragamonedas.PROBABILIDADES
     if juego == "blackjack":
         return [1.0 / 13.0] * 13              # solo con el zapato completo
-    if juego == "poker":
-        return [1.0 / 13.0] * 13              # solo con el mazo completo
     raise ValueError("Juego inválido")
 
 
-# Modos de muestreo del blackjack y del póker:
+# Modos de muestreo del blackjack:
 #   "iid"    -> cada carta sale de un zapato/mazo recién barajado. Las
 #               extracciones son independientes y el chi-cuadrado es válido.
-#   "zapato" / "mazo" -> el reparto real del juego (sin reemplazo). Es el
+#   "zapato" -> el reparto real del juego (sin reemplazo). Es el
 #               modelo que usa la simulación, pero el chi-cuadrado deja de
 #               ser válido: ver la advertencia en `validar_juego`.
 MODOS_BLACKJACK = ("iid", "zapato")
-MODOS_POKER = ("iid", "mazo")
 
 
 def _muestrear(juego, n, generador, modo="iid"):
@@ -175,18 +166,6 @@ def _muestrear(juego, n, generador, modo="iid"):
         for _ in range(n):
             zapato.barajar_si_toca()
             indices.append(blackjack.RANGOS.index(zapato.sacar()))
-        return indices
-    if juego == "poker":
-        if modo == "iid":
-            probabilidades = [1.0 / 13.0] * 13
-            return [generador.discreta(probabilidades) for _ in range(n)]
-        indices = []
-        mazo = poker.Mazo(generador)
-        for _ in range(n):
-            if not mazo.cartas:
-                mazo.reiniciar()
-            valor, _palo = mazo.sacar()
-            indices.append(valor - 2)
         return indices
     raise ValueError("Juego inválido")
 
@@ -243,7 +222,7 @@ def validar_juego(juego, n=60000, metodo="inversa", semilla=13579, modo="iid"):
         "prueba": prueba,
         "metricas": metricas,
     }
-    if juego in ("blackjack", "poker"):
+    if juego == "blackjack":
         resultado["modo"] = modo
         resultado["chi2_valido"] = modo == "iid"
         if modo != "iid":
@@ -440,7 +419,7 @@ def analisis_zapato_blackjack(manos=4000, semilla=4242, tramos=6):
 def comparar_todos(n=40000, semilla=13579):
     """Comparación de los dos métodos en los cuatro juegos, de un tirón."""
     comparaciones = {j: comparar_metodos(j, n, semilla) for j in
-                     ("ruleta", "dados", "tragamonedas", "blackjack", "poker")}
+                     ("ruleta", "dados", "tragamonedas", "blackjack")}
     return {
         "n_por_juego": n,
         "semilla": semilla,
@@ -492,10 +471,8 @@ def reporte_completo(n_uniformes=50000, n_por_juego=30000, semilla=13579):
             ),
             "degradacion_aceptacion_rechazo": analisis_zapato_blackjack(),
         },
-        # variables continuas: la triangular de las carreras y la exponencial
-        # de las llegadas, que es donde los dos métodos se comparan fuera del
-        # terreno discreto
-        "carreras": carreras.comparar_metodos(n=n_por_juego),
+        # variable continua: la exponencial de las llegadas, que es donde los
+        # dos métodos se comparan fuera del terreno discreto
         "llegadas": {
             "validacion": llegadas.validar(horas=24, repeticiones=100, metodo="inversa"),
             "comparacion": llegadas.comparar_metodos(horas=24, repeticiones=50),

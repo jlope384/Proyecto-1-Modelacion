@@ -229,8 +229,7 @@ def prueba_ks_continua(muestra, acumulada, nombre="la distribución teórica"):
     transformada integral de probabilidad: si X ~ F, entonces F(X) ~ U(0,1).
 
     Así una sola implementación (la de uniformidad) sirve para la exponencial
-    de las llegadas y para la triangular de las carreras, sin escribir una
-    prueba distinta por distribución.
+    de las llegadas, sin escribir una prueba distinta por distribución.
     """
     transformada = [acumulada(x) for x in muestra]
     resultado = prueba_ks_uniforme(transformada)

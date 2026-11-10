@@ -1,3 +1,5 @@
+> **Branch `proyecto-2`:** este README todavía describe el Proyecto 1. Carreras, póker y Docker ya no existen en esta branch; ver `docs-proyecto2/BITACORA.md`. Se reescribe en la Fase 10.
+
 # Casino - Modelación y Simulación
 
 Simulación del **piso de un casino** como sistema de llegadas y salidas:

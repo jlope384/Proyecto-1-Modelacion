@@ -6,8 +6,6 @@ import Ruleta from "./components/Ruleta.jsx";
 import Dados from "./components/Dados.jsx";
 import Tragamonedas from "./components/Tragamonedas.jsx";
 import Blackjack from "./components/Blackjack.jsx";
-import Carreras from "./components/Carreras.jsx";
-import Poker from "./components/Poker.jsx";
 import Simulacion from "./components/Simulacion.jsx";
 import Modelos from "./components/Modelos.jsx";
 import { api } from "./api.js";
@@ -35,8 +33,6 @@ export default function App() {
         {tabActivo === "dados" && <Dados onSaldoActualizado={setSaldo} />}
         {tabActivo === "tragamonedas" && <Tragamonedas onSaldoActualizado={setSaldo} />}
         {tabActivo === "blackjack" && <Blackjack onSaldoActualizado={setSaldo} />}
-        {tabActivo === "carreras" && <Carreras onSaldoActualizado={setSaldo} />}
-        {tabActivo === "poker" && <Poker onSaldoActualizado={setSaldo} />}
         {tabActivo === "simulacion" && <Simulacion />}
         {tabActivo === "modelos" && <Modelos />}
       </main>

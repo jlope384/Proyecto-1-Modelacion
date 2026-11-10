@@ -15,11 +15,6 @@ espera, longitud de fila y probabilidad de congestión, que es exactamente lo
 que pide el enunciado del proyecto y que la simulación de rondas sueltas de
 `simulacion.py` no puede dar (ahí no hay capacidad limitada ni cola).
 
-Carreras y póker quedan fuera del piso a propósito: cada ronda de esos dos ya
-corre su propio Monte Carlo interno (cotización de la carrera, equity de los
-bots), así que meterlos aquí haría que un día simulado tardara minutos en vez
-de segundos. El piso los deja para el modo interactivo.
-
 Motor: un calendario de eventos con `heapq` (Capa 1: LLEGADA, FIN_SERVICIO,
 ABANDONO_COLA), tal como el enunciado autoriza explícitamente ("puede ser tan
 simple como generar arreglos de tiempos y procesarlos secuencialmente"). No

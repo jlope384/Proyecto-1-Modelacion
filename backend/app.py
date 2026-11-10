@@ -4,11 +4,9 @@ from flask import Flask, jsonify, request
 
 from casino import (
     blackjack,
-    carreras,
     dados,
     llegadas,
     piso,
-    poker,
     rng,
     ruleta,
     simulacion,
@@ -26,12 +24,10 @@ SALDO_INICIAL = 1000
 # Estado en memoria (un único jugador, sin base de datos: simplifica el proyecto).
 saldo_jugador = {"saldo": SALDO_INICIAL}
 
-# Mesa de blackjack e hipódromo de la sesión interactiva. Usan el generador
+# Mesa de blackjack de la sesión interactiva. Usan el generador
 # global, así que cambiar el método desde /api/generador también cambia cómo
-# salen las cartas y cómo corren los caballos.
+# salen las cartas.
 mesa_blackjack = blackjack.Mesa()
-hipodromo = carreras.Hipodromo()
-mesa_poker = poker.MesaPoker()
 
 
 @app.route("/api/estado")
@@ -45,11 +41,9 @@ def estado():
 
 @app.route("/api/reiniciar", methods=["POST"])
 def reiniciar():
-    global mesa_blackjack, hipodromo, mesa_poker
+    global mesa_blackjack
     saldo_jugador["saldo"] = SALDO_INICIAL
     mesa_blackjack = blackjack.Mesa()
-    hipodromo = carreras.Hipodromo()
-    mesa_poker = poker.MesaPoker()
     return jsonify({"saldo": saldo_jugador["saldo"]})
 
 
@@ -59,7 +53,7 @@ def generador():
     Consulta o cambia el método de generación de la sesión interactiva.
     Sirve para demostrar en vivo que los dos métodos producen el mismo juego.
     """
-    global mesa_blackjack, hipodromo, mesa_poker
+    global mesa_blackjack
     if request.method == "POST":
         datos = request.get_json() or {}
         metodo = datos.get("metodo")
@@ -68,8 +62,6 @@ def generador():
         semilla = datos.get("semilla")
         rng.configurar_generador(metodo=metodo, semilla=int(semilla) if semilla else None)
         mesa_blackjack = blackjack.Mesa()
-        hipodromo = carreras.Hipodromo()
-        mesa_poker = poker.MesaPoker()
 
     gen = rng.generador_actual()
     return jsonify({
@@ -261,205 +253,6 @@ def blackjack_analisis_zapato():
 
 
 # ---------------------------------------------------------------------------
-# Carrera de caballos interactiva
-#
-# El flujo tiene más pasos que los otros juegos porque hay que ponerle precio
-# al lote antes de aceptar apuestas:
-#   nueva -> (dato | redbull)* -> apostar -> correr
-# ---------------------------------------------------------------------------
-
-
-def _responder_hipodromo(cobrar_soborno=0.0, liquidar=False):
-    estado_pista = hipodromo.estado()
-    if cobrar_soborno:
-        saldo_jugador["saldo"] -= cobrar_soborno
-    if liquidar and estado_pista.get("corrida"):
-        saldo_jugador["saldo"] += estado_pista["ganancia"]
-    estado_pista["saldo"] = saldo_jugador["saldo"]
-    return jsonify(estado_pista)
-
-
-@app.route("/api/carreras/estado")
-def carreras_estado():
-    estado_pista = hipodromo.estado()
-    estado_pista["saldo"] = saldo_jugador["saldo"]
-    return jsonify(estado_pista)
-
-
-@app.route("/api/carreras/nueva", methods=["POST"])
-def carreras_nueva():
-    hipodromo.nueva_carrera()
-    return _responder_hipodromo()
-
-
-@app.route("/api/carreras/apostar", methods=["POST"])
-def carreras_apostar():
-    datos = request.get_json() or {}
-    apuesta = float(datos.get("apuesta", 0))
-    caballo = datos.get("caballo")
-
-    if not _validar_apuesta(apuesta):
-        return jsonify({"error": "Apuesta inválida"}), 400
-    if caballo is None:
-        return jsonify({"error": "Falta el número de caballo"}), 400
-
-    try:
-        hipodromo.apostar(caballo, apuesta)
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    saldo_jugador["saldo"] -= apuesta  # la apuesta se retiene al registrarla
-    return _responder_hipodromo()
-
-
-@app.route("/api/carreras/soborno/dato", methods=["POST"])
-def carreras_soborno_dato():
-    if saldo_jugador["saldo"] < carreras.COSTO_DATO:
-        return jsonify({"error": "Saldo insuficiente para el dato"}), 400
-    try:
-        hipodromo.comprar_dato()
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    return _responder_hipodromo(cobrar_soborno=carreras.COSTO_DATO)
-
-
-@app.route("/api/carreras/soborno/redbull", methods=["POST"])
-def carreras_soborno_redbull():
-    datos = request.get_json() or {}
-    caballo = datos.get("caballo")
-    if caballo is None:
-        return jsonify({"error": "Falta el número de caballo"}), 400
-    if saldo_jugador["saldo"] < carreras.COSTO_REDBULL:
-        return jsonify({"error": "Saldo insuficiente para el redbull"}), 400
-    try:
-        hipodromo.dar_redbull(caballo)
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    return _responder_hipodromo(cobrar_soborno=carreras.COSTO_REDBULL)
-
-
-@app.route("/api/carreras/correr", methods=["POST"])
-def carreras_correr():
-    try:
-        hipodromo.correr_carrera()
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    # al liquidar se devuelve la apuesta retenida más la ganancia neta
-    estado_pista = hipodromo.estado()
-    if estado_pista["caballo_apostado"] is not None:
-        saldo_jugador["saldo"] += estado_pista["apuesta"] + estado_pista["ganancia"]
-    estado_pista["saldo"] = saldo_jugador["saldo"]
-    return jsonify(estado_pista)
-
-
-@app.route("/api/carreras/soborno/analisis", methods=["POST"])
-def carreras_analisis_soborno():
-    datos = request.get_json() or {}
-    repeticiones = int(datos.get("repeticiones", 400))
-    apuesta = float(datos.get("apuesta", 100))
-    if repeticiones < 10 or repeticiones > 3000:
-        return jsonify({"error": "Repeticiones fuera de rango (10 a 3000)"}), 400
-    if apuesta <= 0:
-        return jsonify({"error": "Apuesta inválida"}), 400
-    return jsonify(carreras.analisis_soborno(repeticiones, apuesta))
-
-
-@app.route("/api/carreras/precision-cuotas", methods=["POST"])
-def carreras_precision_cuotas():
-    """Sesgo de selección (maldición del ganador) según cuánto simula la casa."""
-    datos = request.get_json() or {}
-    lotes = int(datos.get("lotes", 60))
-    m_referencia = int(datos.get("m_referencia", 2500))
-    if lotes < 10 or lotes > 500:
-        return jsonify({"error": "Lotes fuera de rango (10 a 500)"}), 400
-    if m_referencia < 500 or m_referencia > 10000:
-        return jsonify({"error": "m_referencia fuera de rango (500 a 10,000)"}), 400
-    return jsonify(carreras.analisis_precision_cuotas(
-        lotes=lotes, m_referencia=m_referencia
-    ))
-
-
-@app.route("/api/carreras/validacion", methods=["GET", "POST"])
-def carreras_validacion():
-    """Chi-cuadrado y KS de la velocidad triangular, con los dos métodos."""
-    datos = request.get_json(silent=True) or {}
-    n = int(datos.get("n", 50000))
-    if n < 500 or n > 300_000:
-        return jsonify({"error": "n fuera de rango (500 a 300,000)"}), 400
-    return jsonify(carreras.comparar_metodos(n))
-
-
-# ---------------------------------------------------------------------------
-# Póker (Texas Hold'em) interactivo
-#
-# El humano se sienta comprando fichas con su saldo del casino y juega mano
-# tras mano contra 3 bots que deciden con equity por Monte Carlo. Como en
-# blackjack, una mano son varias decisiones: nueva -> accion* -> (showdown |
-# todos se retiran menos uno), y la mesa resuelve los turnos de los bots
-# automáticamente entre una llamada y la siguiente.
-# ---------------------------------------------------------------------------
-
-
-def _responder_poker():
-    estado_mesa = mesa_poker.estado()
-    estado_mesa["saldo"] = saldo_jugador["saldo"]
-    return jsonify(estado_mesa)
-
-
-@app.route("/api/poker/estado")
-def poker_estado():
-    return _responder_poker()
-
-
-@app.route("/api/poker/comprar", methods=["POST"])
-def poker_comprar():
-    datos = request.get_json() or {}
-    monto = float(datos.get("monto", 0))
-
-    if monto <= 0 or monto > saldo_jugador["saldo"]:
-        return jsonify({"error": "Monto inválido"}), 400
-    try:
-        mesa_poker.comprar_fichas(monto)
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    saldo_jugador["saldo"] -= monto
-    return _responder_poker()
-
-
-@app.route("/api/poker/retirarse", methods=["POST"])
-def poker_retirarse():
-    try:
-        stack_final = mesa_poker.retirarse_mesa()
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    saldo_jugador["saldo"] += stack_final
-    return _responder_poker()
-
-
-@app.route("/api/poker/nueva", methods=["POST"])
-def poker_nueva():
-    try:
-        mesa_poker.nueva_mano()
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    return _responder_poker()
-
-
-@app.route("/api/poker/accion", methods=["POST"])
-def poker_accion():
-    datos = request.get_json() or {}
-    accion = datos.get("accion")
-    monto = float(datos.get("monto", 0))
-
-    if accion not in ("fold", "check", "call", "raise"):
-        return jsonify({"error": "Acción inválida. Use fold, check, call o raise"}), 400
-    try:
-        mesa_poker.actuar(accion, monto)
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    return _responder_poker()
-
-
-# ---------------------------------------------------------------------------
 # Simulación
 # ---------------------------------------------------------------------------
 
@@ -482,14 +275,7 @@ def simulacion_ejecutar():
     if apuesta <= 0:
         return jsonify({"error": "Apuesta inválida"}), 400
 
-    # la carrera y el póker cuestan mucho más por ronda que los demás juegos:
-    # la carrera pone precio simulando el lote antes de correr, y el póker
-    # corre una estimación de equity por Monte Carlo en cada decisión de bot
     tope = 100_000
-    if juego == "carreras":
-        tope = simulacion.MAX_RONDAS_CARRERAS
-    elif juego == "poker":
-        tope = simulacion.MAX_RONDAS_POKER
     if rondas <= 0 or rondas > tope:
         return jsonify({"error": f"Número de rondas inválido (máx. {tope:,})"}), 400
 
@@ -497,7 +283,6 @@ def simulacion_ejecutar():
         resultado = simulacion.simular(
             juego, rondas, apuesta, tipo, valor,
             metodo=metodo, semilla=int(semilla) if semilla else None,
-            m_cuotas=int(datos.get("m_cuotas", simulacion.SIMULACIONES_CUOTA_LOTE)),
         )
     except (ValueError, KeyError, IndexError) as e:
         return jsonify({"error": f"Parámetros inválidos: {e}"}), 400

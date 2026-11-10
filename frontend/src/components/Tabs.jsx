@@ -4,8 +4,6 @@ const TABS = [
   { id: "dados", label: "Dados" },
   { id: "tragamonedas", label: "Tragamonedas" },
   { id: "blackjack", label: "Blackjack" },
-  { id: "carreras", label: "Carreras" },
-  { id: "poker", label: "Póker" },
   { id: "simulacion", label: "Simulación" },
   { id: "modelos", label: "La casa por dentro" },
 ];

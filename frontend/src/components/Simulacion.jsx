@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Bar, Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -16,25 +16,11 @@ ChartJS.register(
   CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend
 );
 
-// Costo medido por ronda (ms). La carrera pone precio simulando el lote antes
-// de correr, y el póker corre una estimación de equity por Monte Carlo en cada
-// decisión de cada bot, así que ambos son órdenes de magnitud más caros.
-const COSTO_MS = {
-  ruleta: 0.002,
-  dados: 0.002,
-  tragamonedas: 0.003,
-  blackjack: 0.02,
-  carreras: 23,
-  poker: 124,
-};
-
 const JUEGOS = {
   ruleta: { label: "Ruleta", rondas: 5000, max: 100000 },
   dados: { label: "Dados", rondas: 5000, max: 100000 },
   tragamonedas: { label: "Tragamonedas", rondas: 5000, max: 100000 },
   blackjack: { label: "Blackjack", rondas: 20000, max: 100000 },
-  carreras: { label: "Carrera de caballos", rondas: 400, max: 3000 },
-  poker: { label: "Póker (Texas Hold'em)", rondas: 150, max: 3000 },
 };
 
 const ESTRATEGIAS = {
@@ -43,32 +29,16 @@ const ESTRATEGIAS = {
     ["dealer", "Imitar al dealer"],
     ["umbral", "Umbral fijo"],
   ],
-  carreras: [
-    ["favorito", "Al favorito"],
-    ["tapado", "Al tapado"],
-    ["azar", "Al azar (sin sesgo de selección)"],
-    ["fijo", "A un caballo fijo"],
-  ],
-  poker: [
-    ["equity", "Equity por Monte Carlo"],
-    ["agresiva", "Agresiva"],
-    ["pasiva", "Pasiva"],
-    ["azar", "Al azar (control, no estima equity)"],
-  ],
 };
 
 // Nombres legibles para el desglose que devuelve cada juego
 const RESULTADOS = {
   blackjack: "Desenlace de la mano",
-  poker: "Cómo terminó la mano",
-  carreras: "Estrategia usada",
 };
 
 const ETIQUETA_DESGLOSE = {
   gana: "Gana", pierde: "Pierde", empate: "Empate", se_paso: "Se pasó",
   dealer_se_paso: "Dealer se pasó", blackjack: "Blackjack",
-  showdown: "Showdown", fold: "Todos se retiraron", all_in: "All-in",
-  favorito: "Favorito", tapado: "Tapado", azar: "Azar", fijo: "Fijo",
 };
 
 const EJES = {
@@ -92,12 +62,6 @@ function pct(x, dec = 2) {
   return `${(x * 100).toFixed(dec)}%`;
 }
 
-function duracion(seg) {
-  if (seg < 1) return "menos de 1 s";
-  if (seg < 60) return `~${Math.round(seg)} s`;
-  return `~${Math.floor(seg / 60)} min ${Math.round(seg % 60)} s`;
-}
-
 export default function Simulacion() {
   const [juego, setJuego] = useState("ruleta");
   const [rondas, setRondas] = useState(JUEGOS.ruleta.rondas);
@@ -111,20 +75,12 @@ export default function Simulacion() {
   const [dadosValor, setDadosValor] = useState("7");
   const [bjEstrategia, setBjEstrategia] = useState("basica");
   const [bjUmbral, setBjUmbral] = useState(17);
-  const [crEstrategia, setCrEstrategia] = useState("azar");
-  const [crCaballo, setCrCaballo] = useState(1);
-  const [pkEstrategia, setPkEstrategia] = useState("equity");
 
   const [resultado, setResultado] = useState(null);
   const [error, setError] = useState(null);
   const [cargando, setCargando] = useState(false);
 
   const cfg = JUEGOS[juego];
-  const estimado = useMemo(
-    () => (COSTO_MS[juego] * Number(rondas)) / 1000,
-    [juego, rondas]
-  );
-  const lento = estimado > 8;
 
   function cambiarJuego(nuevo) {
     setJuego(nuevo);
@@ -151,11 +107,6 @@ export default function Simulacion() {
     } else if (juego === "blackjack") {
       cuerpo.tipo = bjEstrategia;
       cuerpo.valor = bjUmbral;
-    } else if (juego === "carreras") {
-      cuerpo.tipo = crEstrategia;
-      cuerpo.valor = crCaballo;
-    } else if (juego === "poker") {
-      cuerpo.tipo = pkEstrategia;
     }
 
     setCargando(true);
@@ -200,7 +151,7 @@ export default function Simulacion() {
       <p className="ayuda">
         Corre muchas rondas automáticas para ver el comportamiento del casino a largo plazo (no
         afecta tu saldo real). Donde existe forma cerrada, el retorno simulado se contrasta contra
-        el teórico; en blackjack, póker y carreras no la hay, así que esta simulación <em>es</em> la
+        el teórico; en blackjack no la hay, así que esta simulación <em>es</em> la
         forma de estimarlo.
       </p>
 
@@ -301,52 +252,6 @@ export default function Simulacion() {
             </label>
           )}
         </div>
-      )}
-
-      {juego === "carreras" && (
-        <div className="form-fila">
-          <label>
-            Estrategia de apuesta
-            <select value={crEstrategia} onChange={(e) => setCrEstrategia(e.target.value)}>
-              {ESTRATEGIAS.carreras.map(([id, l]) => (
-                <option key={id} value={id}>{l}</option>
-              ))}
-            </select>
-          </label>
-          {crEstrategia === "fijo" && (
-            <label>
-              Número de caballo
-              <input
-                type="number"
-                min="1"
-                max="8"
-                value={crCaballo}
-                onChange={(e) => setCrCaballo(e.target.value)}
-              />
-            </label>
-          )}
-        </div>
-      )}
-
-      {juego === "poker" && (
-        <div className="form-fila">
-          <label>
-            Estrategia del asiento 0
-            <select value={pkEstrategia} onChange={(e) => setPkEstrategia(e.target.value)}>
-              {ESTRATEGIAS.poker.map(([id, l]) => (
-                <option key={id} value={id}>{l}</option>
-              ))}
-            </select>
-          </label>
-        </div>
-      )}
-
-      {lento && (
-        <p className="ayuda">
-          Esta corrida va a tardar {duracion(estimado)}. {juego === "poker"
-            ? "Cada mano de póker dispara una estimación de equity por Monte Carlo en cada decisión de cada bot."
-            : "Cada carrera se simula 250 veces para ponerle precio antes de correrla."}
-        </p>
       )}
 
       <button className="boton-primario" onClick={ejecutar} disabled={cargando}>
