@@ -428,7 +428,14 @@ def piso_simular():
     if horas <= 0 or horas > 24 * 7:
         return jsonify({"error": "Horas fuera de rango (0 a 168)"}), 400
 
-    return jsonify(piso.simular_dia(horas, metodo, semilla=int(semilla) if semilla else None))
+    try:
+        return jsonify(piso.simular_dia(
+            horas, metodo, semilla=int(semilla) if semilla else None,
+            factor_llegadas=float(datos.get("factor_llegadas", 1.0)),
+            paciencia_media_min=(float(datos["paciencia_media_min"])
+                                 if datos.get("paciencia_media_min") is not None else None)))
+    except (ValueError, TypeError) as e:
+        return jsonify({"error": str(e)}), 400
 
 
 @app.route("/api/piso/comparacion", methods=["POST"])

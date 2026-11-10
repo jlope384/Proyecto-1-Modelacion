@@ -177,7 +177,8 @@ def _sesion(juego, bankroll_inicial, gen, zapato=None):
 # ---------------------------------------------------------------------------
 
 
-def simular_dia(horas=24.0, metodo="inversa", semilla=None, recursos=None, pesos_juego=None):
+def simular_dia(horas=24.0, metodo="inversa", semilla=None, recursos=None, pesos_juego=None,
+                factor_llegadas=1.0, tasa_por_hora=None, paciencia_media_min=None):
     """
     Corre el piso durante `horas` de llegadas (el calendario sigue procesando
     a los clientes que ya llegaron hasta que todos son atendidos o abandonan,
@@ -189,11 +190,19 @@ def simular_dia(horas=24.0, metodo="inversa", semilla=None, recursos=None, pesos
     """
     recursos = recursos or RECURSOS
     pesos_juego = pesos_juego or PESOS_JUEGO
+    if paciencia_media_min is None:
+        paciencia_media_min = PACIENCIA_MEDIA_MIN
+    if not factor_llegadas > 0:
+        raise ValueError("factor_llegadas debe ser > 0")
+    if not paciencia_media_min > 0:
+        raise ValueError("paciencia_media_min debe ser > 0")
+    tasas = [x * factor_llegadas for x in (tasa_por_hora or llegadas.TASA_POR_HORA)]
 
     gen = rng.Generador(metodo=metodo, semilla=semilla)
     gen.reiniciar_contadores()
 
-    instantes_llegada, _ = llegadas.generar(horas, metodo, generador=gen)
+    instantes_llegada, _ = llegadas.generar(horas, metodo, generador=gen,
+                                          tasa_por_hora=tasa_por_hora, factor=factor_llegadas)
 
     estado = {
         r: {
@@ -290,10 +299,10 @@ def simular_dia(horas=24.0, metodo="inversa", semilla=None, recursos=None, pesos
         if mesa is not None:
             _sentar(cliente, t, mesa, espera_min=0.0)
             return
-        # no hay puesto: se une a la cola con una paciencia Exp(media 8 min)
+        # no hay puesto: se une a la cola con una paciencia Exp(media paciencia_media_min)
         cliente["estado"] = "esperando"
         st["cola"].append(cliente)
-        tasa_paciencia = 60.0 / PACIENCIA_MEDIA_MIN  # eventos por hora
+        tasa_paciencia = 60.0 / paciencia_media_min  # eventos por hora
         paciencia = gen.exponencial(tasa_paciencia)
         heapq.heappush(eventos, (t + paciencia, next(contador), _ABANDONO, cliente["id"]))
 
@@ -350,7 +359,9 @@ def simular_dia(horas=24.0, metodo="inversa", semilla=None, recursos=None, pesos
 
         "llegadas_totales": llegadas_totales,
         "llegadas_por_hora": llegadas_por_hora,
-        "tasa_por_hora": llegadas.TASA_POR_HORA,
+        "tasa_por_hora": tasas,
+        "factor_llegadas": factor_llegadas,
+        "paciencia_media_min": paciencia_media_min,
 
         "atendidos": atendidos,
         "abandonos": abandonos,

@@ -44,18 +44,19 @@ TASA_POR_HORA = [
 LAMBDA_MAX = max(TASA_POR_HORA)
 
 
-def tasa(t):
+def tasa(t, tasas=None):
     """lambda(t) con t en horas desde el inicio de la simulación."""
-    return TASA_POR_HORA[int(t) % 24]
+    return (tasas or TASA_POR_HORA)[int(t) % 24]
 
 
-def lambda_acumulada(t):
+def lambda_acumulada(t, tasas=None):
     """Lambda(t) = integral de lambda desde 0 hasta t (llegadas esperadas)."""
+    tasas = tasas or TASA_POR_HORA
     total = 0.0
     entero = int(t)
     for h in range(entero):
-        total += TASA_POR_HORA[h % 24]
-    total += (t - entero) * TASA_POR_HORA[entero % 24]
+        total += tasas[h % 24]
+    total += (t - entero) * tasas[entero % 24]
     return total
 
 
@@ -64,7 +65,7 @@ def lambda_acumulada(t):
 # ---------------------------------------------------------------------------
 
 
-def _llegadas_inversa(horas, generador):
+def _llegadas_inversa(horas, generador, tasas):
     """
     Transformada inversa sobre el proceso no homogéneo.
 
@@ -85,9 +86,9 @@ def _llegadas_inversa(horas, generador):
         while saldo > 0 and t < horas:
             hora_actual = int(t)
             fin_tramo = min(hora_actual + 1.0, horas)
-            capacidad = (fin_tramo - t) * TASA_POR_HORA[hora_actual % 24]
+            capacidad = (fin_tramo - t) * tasas[hora_actual % 24]
             if saldo <= capacidad:
-                t += saldo / TASA_POR_HORA[hora_actual % 24]
+                t += saldo / tasas[hora_actual % 24]
                 saldo = 0.0
             else:
                 saldo -= capacidad
@@ -98,23 +99,24 @@ def _llegadas_inversa(horas, generador):
     return llegadas
 
 
-def _llegadas_adelgazamiento(horas, generador):
+def _llegadas_adelgazamiento(horas, generador, tasas):
     """
     Aceptación-rechazo (adelgazamiento): se propone un proceso homogéneo con
     lambda_max y se acepta cada llegada con probabilidad lambda(t)/lambda_max.
     Las propuestas rechazadas son trabajo perdido, igual que en la versión
     discreta del método.
     """
+    lambda_max = max(tasas)
     llegadas = []
     t = 0.0
     while True:
         u1 = generador.fuente.uniforme()
-        t += -math.log(1.0 - u1) / LAMBDA_MAX
+        t += -math.log(1.0 - u1) / lambda_max
         if t >= horas:
             break
         u2 = generador.fuente.uniforme()
         generador.n_propuestas += 1
-        if u2 <= tasa(t) / LAMBDA_MAX:
+        if u2 <= tasa(t, tasas) / lambda_max:
             llegadas.append(t)
             generador.n_variables += 1
         else:
@@ -122,17 +124,19 @@ def _llegadas_adelgazamiento(horas, generador):
     return llegadas
 
 
-def generar(horas=24.0, metodo="inversa", semilla=None, generador=None):
+def generar(horas=24.0, metodo="inversa", semilla=None, generador=None,
+            tasa_por_hora=None, factor=1.0):
     """
     Instantes de llegada (en horas) durante `horas` de operación.
     Devuelve (llegadas, generador) para poder leer las métricas de costo.
     """
     gen = generador if generador is not None else rng.Generador(metodo=metodo, semilla=semilla)
     gen.reiniciar_contadores()
+    tasas = [x * factor for x in (tasa_por_hora or TASA_POR_HORA)]
     if metodo == "inversa":
-        llegadas = _llegadas_inversa(horas, gen)
+        llegadas = _llegadas_inversa(horas, gen, tasas)
     elif metodo == "aceptacion_rechazo":
-        llegadas = _llegadas_adelgazamiento(horas, gen)
+        llegadas = _llegadas_adelgazamiento(horas, gen, tasas)
     else:
         raise ValueError(f"Método inválido: {metodo!r}")
     return llegadas, gen
