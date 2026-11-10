@@ -26,6 +26,9 @@ PROBABILIDADES_SUMA = [
     5 / 36, 4 / 36, 3 / 36, 2 / 36, 1 / 36,
 ]
 
+# Apuesta "field" (tipo craps): sumas ganadoras de una sola tirada.
+FIELD = (2, 3, 4, 9, 10, 11, 12)
+
 
 def tirar(generador=None):
     gen = rng.resolver(generador)
@@ -38,6 +41,8 @@ def jugar(apuesta, tipo, valor, generador=None):
     """
     tipo "suma": valor 2-12, paga según PAGOS_SUMA
     tipo "par_impar": valor "par"/"impar", paga 1:1
+    tipo "field": (valor se ignora) gana con 2,3,4,9,10,11,12; paga 1:1,
+        salvo 2 y 12 que pagan 2:1; pierde con 5,6,7,8. Ventaja de la casa 1/18.
     Devuelve (dado1, dado2, suma, gano, ganancia_neta).
     """
     d1, d2, suma = tirar(generador)
@@ -51,6 +56,9 @@ def jugar(apuesta, tipo, valor, generador=None):
         es_par = suma % 2 == 0
         gano = (es_par and valor == "par") or (not es_par and valor == "impar")
         multiplicador = 1
+    elif tipo == "field":
+        gano = suma in FIELD
+        multiplicador = 2 if suma in (2, 12) else 1
     else:
         raise ValueError("Tipo de apuesta inválido")
 
@@ -63,10 +71,14 @@ def probabilidad_teorica(tipo, valor):
         return PROBABILIDADES_SUMA[int(valor) - 2]
     if tipo == "par_impar":
         return 0.5
+    if tipo == "field":
+        return 16 / 36
     raise ValueError("Tipo de apuesta inválido")
 
 
 def retorno_teorico(tipo, valor):
+    if tipo == "field":
+        return (14 * 1 + 2 * 2 - 20) / 36
     p = probabilidad_teorica(tipo, valor)
     pago = PAGOS_SUMA[int(valor)] if tipo == "suma" else 1
     return p * pago - (1 - p)

@@ -32,8 +32,8 @@ La tabla actual corrige eso con dos cambios:
    evento regala el juego. Así el jugador conserva la sensación de que "casi
    siempre pasa algo" sin que la casa pierda.
 
-El resultado es una ventaja de la casa de 4.48%, del orden de una tragamonedas
-real (que suele ir de 2% a 15%) y comparable al 2.70% de la ruleta europea.
+El resultado es una ventaja de la casa de 7.325%, que coincide con el 7.32% de
+win percent de las tragamonedas de Nevada (NGCB, sept. 2021; rango real 2%-15%), por encima del 2.70% de la ruleta europea.
 """
 
 from itertools import product
@@ -48,7 +48,7 @@ PROBABILIDADES = [w / _TOTAL_PESOS for w in PESOS]
 
 # Ganancia NETA por unidad apostada al sacar tres del mismo símbolo.
 # El orden sigue a SIMBOLOS: cereza, limón, campana, estrella, siete.
-PAGOS_TRIO = [2, 3, 8, 50, 300]
+PAGOS_TRIO = [2, 3, 7, 40, 216]
 
 # Dos iguales: multiplicador 0 = se devuelve la apuesta (ni gana ni pierde).
 PAGO_PAR = 0.0
@@ -127,7 +127,7 @@ def _enumerar():
 
 
 def retorno_teorico():
-    """Valor esperado exacto por unidad apostada. Debe dar -4.475%."""
+    """Valor esperado exacto por unidad apostada. Debe dar -7.325%."""
     return sum(p * _multiplicador(c) for c, p in _enumerar())
 
 

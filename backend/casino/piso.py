@@ -87,7 +87,7 @@ PACIENCIA_MEDIA_MIN = 8.0
 # 1:1); lo que importa aquí es el tiempo de servicio y el flujo de caja, no
 # explorar todos los tipos de apuesta que ya cubre el modo interactivo.
 _APUESTA_RULETA = ("color", "rojo")
-_APUESTA_DADOS = ("par_impar", "par")
+_APUESTA_DADOS = ("field", None)
 
 MAX_PUNTOS_SERIE = 2000
 
@@ -512,6 +512,11 @@ def _demo():
     assert abs(L_obs - L_est) / max(L_obs, 1e-9) < 0.05, (
         f"Little no cuadra: observado={L_obs:.3f} estimado={L_est:.3f}"
     )
+
+    assert abs(dados.retorno_teorico("field", None) + 1 / 18) < 1e-12
+    assert abs(tragamonedas.retorno_teorico() + 0.07325) < 1e-9
+    teo = r["ingreso_teorico_por_juego"]
+    assert teo and all(v > 0 for v in teo.values()), f"ingreso teórico no positivo: {teo}"
 
     comp = comparar_metodos(horas=24, replicas=15, semilla_base=555)
     a = comp["resultados"]["inversa"]["espera_cola_min"]["ic95"]

@@ -1,0 +1,127 @@
+{
+ "abandonos": 60,
+ "apostado_por_juego": {
+  "blackjack": 472553.6535446303,
+  "dados": 103558.63667090725,
+  "ruleta": 367526.0131950208,
+  "tragamonedas": 1343930.2049390096
+ },
+ "atendidos": 695,
+ "clientes_promedio_cola": {
+  "blackjack": 0.051939363869632396,
+  "dados": 0.009880306798285486,
+  "ruleta": 0.17746859488212338,
+  "tragamonedas": 0.06274575098885701
+ },
+ "clientes_promedio_sistema": 24.485582570581354,
+ "espera_promedio_min": 0.42280666713971976,
+ "etiqueta_metodo": "Transformada inversa",
+ "factor_llegadas": 1.0,
+ "horas": 24,
+ "ingreso_por_juego": {
+  "blackjack": 3128.720912179197,
+  "dados": 6035.005484805805,
+  "ruleta": -1220.8381750652475,
+  "tragamonedas": 80158.91778505655
+ },
+ "ingreso_teorico_por_juego": {
+  "dados": 5753.25759282818,
+  "ruleta": 9933.135491757299,
+  "tragamonedas": 98442.88751178244
+ },
+ "ingreso_total": 88101.8060069763,
+ "little": {
+  "L_estimado_por_little": 24.37213219402745,
+  "L_observado": 24.485582570581354,
+  "lambda_efectiva": 26.761683952733577
+ },
+ "llegadas_totales": 755,
+ "metodo": "inversa",
+ "metricas_generador": {
+  "etiqueta": "Transformada inversa",
+  "metodo": "inversa",
+  "propuestas": 0,
+  "rechazos": 0,
+  "tasa_rechazo": 0.0,
+  "uniformes_consumidos": 603363,
+  "uniformes_por_variable": 1.0,
+  "variables_generadas": 603363
+ },
+ "motivos_fin": {
+  "estadia": 356,
+  "meta": 109,
+  "quiebra": 230
+ },
+ "paciencia_media_min": 8.0,
+ "pesos_juego": {
+  "blackjack": 0.2,
+  "dados": 0.1,
+  "ruleta": 0.25,
+  "tragamonedas": 0.45
+ },
+ "prob_abandono": 0.07947019867549669,
+ "prob_congestion": 0.10647482014388489,
+ "recursos": {
+  "blackjack": {
+   "capacidad_total": 20,
+   "mesas": 4,
+   "puestos_por_mesa": 5
+  },
+  "dados": {
+   "capacidad_total": 8,
+   "mesas": 1,
+   "puestos_por_mesa": 8
+  },
+  "ruleta": {
+   "capacidad_total": 14,
+   "mesas": 2,
+   "puestos_por_mesa": 7
+  },
+  "tragamonedas": {
+   "capacidad_total": 20,
+   "mesas": 20,
+   "puestos_por_mesa": 1
+  }
+ },
+ "rondas_por_juego": {
+  "blackjack": 9964,
+  "dados": 2236,
+  "ruleta": 7935,
+  "tragamonedas": 98577
+ },
+ "semilla": 1,
+ "tasa_por_hora": [
+  45.0,
+  30.0,
+  18.0,
+  10.0,
+  6.0,
+  4.0,
+  4.0,
+  6.0,
+  10.0,
+  14.0,
+  18.0,
+  24.0,
+  30.0,
+  32.0,
+  30.0,
+  28.0,
+  32.0,
+  40.0,
+  50.0,
+  62.0,
+  75.0,
+  90.0,
+  85.0,
+  65.0
+ ],
+ "tiempo_sistema_promedio_min": 54.64259776120244,
+ "tiempo_total_horas": 25.969965164655086,
+ "utilizacion": {
+  "blackjack": 0.3737080350161088,
+  "dados": 0.30861259463931645,
+  "ruleta": 0.5206950724946598,
+  "tragamonedas": 0.34753780408402285
+ }
+}
