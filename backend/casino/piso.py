@@ -177,8 +177,24 @@ def _sesion(juego, bankroll_inicial, gen, zapato=None):
 # ---------------------------------------------------------------------------
 
 
+def _semilla_derivada(semilla, n):
+    """
+    Semilla de 32 bits para el flujo n de un día (mezcla tipo splitmix/murmur).
+    Semillas vecinas (n, n+1) quedan en posiciones no relacionadas del ciclo
+    del LCG, en vez de en estados consecutivos.
+    """
+    x = (semilla * 0x9E3779B1 + (n + 0x632BE5AB) * 0x85EBCA77) & 0xFFFFFFFF
+    x ^= x >> 16
+    x = (x * 0x7FEB352D) & 0xFFFFFFFF
+    x ^= x >> 15
+    x = (x * 0x846CA68B) & 0xFFFFFFFF
+    x ^= x >> 16
+    return x
+
+
 def simular_dia(horas=24.0, metodo="inversa", semilla=None, recursos=None, pesos_juego=None,
-                factor_llegadas=1.0, tasa_por_hora=None, paciencia_media_min=None):
+                factor_llegadas=1.0, tasa_por_hora=None, paciencia_media_min=None,
+                escala_bankroll_mesas=1.0, flujos_por_cliente=False):
     """
     Corre el piso durante `horas` de llegadas (el calendario sigue procesando
     a los clientes que ya llegaron hasta que todos son atendidos o abandonan,
@@ -187,6 +203,26 @@ def simular_dia(horas=24.0, metodo="inversa", semilla=None, recursos=None, pesos
     Devuelve KPIs del sistema: espera promedio, longitud de fila, utilización
     por recurso, probabilidad de congestión/abandono, ingreso del casino, y
     el chequeo de consistencia de Little (L ≈ lambda_efectiva * W).
+
+    `escala_bankroll_mesas` multiplica el bankroll de quien se sienta en una
+    mesa (ruleta, dados, blackjack); las tragamonedas no cambian. Puede ser
+    un número (la misma escala para las tres mesas) o un dict por juego. Como la
+    apuesta es una fracción del bankroll, escala también la apuesta. Es el
+    parámetro que la Fase 6 calibra contra la mezcla de ingreso de Nevada
+    (las mesas tienen mínimos de apuesta más altos que una máquina). Con 1.0
+    el resultado es idéntico al de antes de agregarlo.
+
+    `flujos_por_cliente=True` separa los números aleatorios para que sirvan
+    como números aleatorios comunes al comparar configuraciones del piso: el
+    flujo principal de la semilla solo genera las llegadas y el juego que
+    elige cada cliente; cada cliente (bankroll, paciencia, sesión) y cada
+    zapato de blackjack usan su propio flujo, con semilla derivada de la
+    semilla del día y su número. Así, con la misma semilla, dos pisos
+    distintos reciben exactamente los mismos clientes con la misma suerte, y
+    solo cambia lo que depende del piso (quién espera, quién abandona). Con
+    False (por defecto) todo sale de un solo flujo, como en el Proyecto 1;
+    en ese modo `metricas_generador` cuenta todos los uniformes, en el otro
+    solo los del flujo principal.
     """
     recursos = recursos or RECURSOS
     pesos_juego = pesos_juego or PESOS_JUEGO
@@ -196,6 +232,13 @@ def simular_dia(horas=24.0, metodo="inversa", semilla=None, recursos=None, pesos
         raise ValueError("factor_llegadas debe ser > 0")
     if not paciencia_media_min > 0:
         raise ValueError("paciencia_media_min debe ser > 0")
+    # un número para las tres mesas, o un dict {juego: escala} por mesa
+    if isinstance(escala_bankroll_mesas, dict):
+        escala_por_juego = dict(escala_bankroll_mesas)
+    else:
+        escala_por_juego = {r: escala_bankroll_mesas for r in JUEGOS_PISO if r != "tragamonedas"}
+    if not all(v > 0 for v in escala_por_juego.values()):
+        raise ValueError("escala_bankroll_mesas debe ser > 0")
     tasas = [x * factor_llegadas for x in (tasa_por_hora or llegadas.TASA_POR_HORA)]
 
     gen = rng.Generador(metodo=metodo, semilla=semilla)
@@ -203,6 +246,13 @@ def simular_dia(horas=24.0, metodo="inversa", semilla=None, recursos=None, pesos
 
     instantes_llegada, _ = llegadas.generar(horas, metodo, generador=gen,
                                           tasa_por_hora=tasa_por_hora, factor=factor_llegadas)
+    semilla_dia = gen.fuente.semilla
+
+    def _flujo(n):
+        # Generador propio de un cliente (n >= 0) o de un zapato (n < 0).
+        if not flujos_por_cliente:
+            return gen
+        return rng.Generador(metodo=metodo, semilla=_semilla_derivada(semilla_dia, n))
 
     estado = {
         r: {
@@ -210,7 +260,8 @@ def simular_dia(horas=24.0, metodo="inversa", semilla=None, recursos=None, pesos
             "capacidad": cfg["puestos_por_mesa"],
             "cola": [],
             "zapatos": (
-                [blackjack.Zapato(gen) for _ in range(cfg["mesas"])] if r == "blackjack" else None
+                [blackjack.Zapato(_flujo(-1 - i)) for i in range(cfg["mesas"])]
+                if r == "blackjack" else None
             ),
         }
         for r, cfg in recursos.items()
@@ -271,9 +322,12 @@ def simular_dia(horas=24.0, metodo="inversa", semilla=None, recursos=None, pesos
         st["ocupacion"][mesa] += 1
         assert st["ocupacion"][mesa] <= st["capacidad"]  # invariante de capacidad
 
-        bankroll = gen.triangular(*BANKROLL_TRIANGULAR)
+        g = cliente["gen"]
+        bankroll = g.triangular(*BANKROLL_TRIANGULAR)
+        if recurso != "tragamonedas":
+            bankroll *= escala_por_juego.get(recurso, 1.0)
         zapato = st["zapatos"][mesa] if recurso == "blackjack" else None
-        resumen = _sesion(recurso, bankroll, gen, zapato)
+        resumen = _sesion(recurso, bankroll, g, zapato)
         t_fin = t + resumen["duracion_horas"]
 
         cliente["estado"] = "atendido"
@@ -303,7 +357,7 @@ def simular_dia(horas=24.0, metodo="inversa", semilla=None, recursos=None, pesos
         cliente["estado"] = "esperando"
         st["cola"].append(cliente)
         tasa_paciencia = 60.0 / paciencia_media_min  # eventos por hora
-        paciencia = gen.exponencial(tasa_paciencia)
+        paciencia = cliente["gen"].exponencial(tasa_paciencia)
         heapq.heappush(eventos, (t + paciencia, next(contador), _ABANDONO, cliente["id"]))
 
     while eventos:
@@ -314,7 +368,8 @@ def simular_dia(horas=24.0, metodo="inversa", semilla=None, recursos=None, pesos
             cid = next(siguiente_id)
             juego = gen.elegir(list(pesos_juego), pesos=list(pesos_juego.values()))
             llegadas_por_hora[int(t) % 24] += 1
-            cliente = {"id": cid, "juego": juego, "t_llegada": t, "estado": "por_atender"}
+            cliente = {"id": cid, "juego": juego, "t_llegada": t, "estado": "por_atender",
+                       "gen": _flujo(cid)}
             clientes[cid] = cliente
             acum["en_sistema"] += 1
             _intentar_atender(cliente, t)
@@ -362,6 +417,8 @@ def simular_dia(horas=24.0, metodo="inversa", semilla=None, recursos=None, pesos
         "tasa_por_hora": tasas,
         "factor_llegadas": factor_llegadas,
         "paciencia_media_min": paciencia_media_min,
+        "escala_bankroll_mesas": escala_bankroll_mesas,
+        "flujos_por_cliente": flujos_por_cliente,
 
         "atendidos": atendidos,
         "abandonos": abandonos,

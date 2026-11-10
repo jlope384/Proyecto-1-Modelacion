@@ -2,7 +2,7 @@
 
 Registro de lo hecho sobre el código del Proyecto 1, para retomar sin releer el chat. Branch: `proyecto-2` (sale de `main` en `bcc1540`; `main` no se tocó). Plan seguido: `PLAN_IMPLEMENTACION.md`. Instrucciones de origen: `02_instrucciones_reutilizar_codigo.md`.
 
-**Estado: Fases 0–5 (y 5A) del documento 02 terminadas. Sigue la Fase 6 (calibración).**
+**Estado: Fases 0–7 del documento 02 terminadas. Sigue la Fase 8 (experimentos).**
 
 Cómo ejecutar: desde `backend/`, `.venv/bin/python -m casino.piso` (autochequeo) y `.venv/bin/python app.py` (API en :5000); `cd frontend && npm run dev` (:5173). Scripts sueltos necesitan `PYTHONPATH=.` desde `backend/`.
 
@@ -78,11 +78,30 @@ Detalle, etiquetas y comandos en `datos/README.md`. Scripts en `src/datos/` (sol
 - **Kangwon Land:** la página de data.go.kr da 404; se omite, como permite el documento 02.
 - **Hallazgos para la Fase 6:** (1) por unidad, dados > ruleta > blackjack ≫ tragamonedas en Nevada, al revés de lo que hoy produce el simulador (ver Fase 4): la calibración debe acercar el win por mesa; (2) el 82% del win de los 4 juegos es de tragamonedas, con ~400 máquinas por cada ~26 mesas por local; (3) GKL no tiene horas: el perfil horario sigue siendo supuesto, solo se calibra el nivel diario y el factor por día.
 
+## Fase 6 — Calibración y validación
+
+Detalle en `calibracion.md`. Script `src/calibracion/calibrar.py`, escenario compartido `src/modelo/escenario.py`, salidas en `resultados/calibracion/`.
+
+- Piso base = Nevada 2023 unidades por local / 4 → 100 máquinas, 4 blackjack, 1 ruleta, 1 dados; área 142 (máquina 1, BJ 6, ruleta 8, dados 10, estimación). Demanda proporcional a los puestos del piso base (supuesto).
+- Llegadas = GKL 2023 (776.9 visitantes/día por sucursal) × 3 sesiones por visitante (supuesto) → 2,331 sesiones/día; abandono base 9.2%.
+- **Hallazgo:** las "unidades por local" de Nevada no son un mismo piso (máquinas en ~310 locales, mesas en ~100). Se agregó `unidades_estatales` a `nevada_referencia.csv` y la mezcla se compara como *mezcla implícita* (win por unidad simulado × unidades estatales).
+- Único parámetro calibrado: `escala_bankroll_mesas` = 18.01, contra la mezcla de tragamonedas 2023 (82.03%).
+- Validación 2024: hold de tragamonedas +3.5%, factores por día MAE 0.037, mezcla de tragamonedas −2.1%; **reparto entre mesas mal reproducido** (dados +99%, ruleta +56%, blackjack −31% en win por unidad). Se guarda una calibración alternativa por juego para sensibilidad.
+- Motor: `simular_dia` acepta `escala_bankroll_mesas` (número o dict) y `flujos_por_cliente` (números aleatorios comunes reales; varianza de la diferencia entre pisos ~11× menor). Con valores por defecto, idéntico a `linea_base_p2.json`; autochequeo OK.
+
+## Fase 7 — Algoritmo genético
+
+Detalle en `genetico.md`. Script `src/optimizacion/genetico.py`, pruebas `tests/test_genetico.py` (4 OK), salidas en `resultados/optimizacion/` y `resultados/optimizacion_escala_por_juego/`.
+
+- GA a mano: cromosoma de enteros, área constante con reparación, torneo 3, cruce de un punto, mutación ±1, elitismo 2, fitness con penalización por abandono > 10%, CRN + caché + re-evaluación con 30 semillas nuevas.
+- **Resultado:** base 100/4/1/1 → mejorada **84/5/1/2**: ingreso +5.5% (IC95 +11.6k a +91.2k), abandono 8.78% → 9.36%. Área 142 comprobada por código.
+- Con la calibración por juego el GA llega al **mismo reparto**, mejora +4.7% pero no significativa con 30 réplicas.
+
 ## Cómo se trabajó
 
-Orquestación con Claude Code: un agente orquestador (plan, git, verificación, esta bitácora) y agentes Claude Sonnet para el código de las Fases 2, 3 y 4. Declarar este uso de IA en el informe.
+Orquestación con Claude Code: un agente orquestador (plan, git, verificación, esta bitácora) y agentes Claude Sonnet para el código de las Fases 2, 3 y 4. Las Fases 6 y 7 (diseño de la calibración, cambios al motor, GA, pruebas y documentos) las hizo Claude Code (Opus) directamente. Declarar este uso de IA en el informe.
 
 ## Siguiente
 
-1. Fase 6: calibración con `datos/procesados/nevada_referencia.csv` y `gkl_dia_semana.csv` (2023 calibra, 2024 valida).
-2. Fase 7: GA. Luego experimentos, gráficas, UI e informe.
+1. Fase 8: experimentos con `escenario.simular` (base, mejorada 84/5/1/2, llegadas +20%, paciencia 50–150%, áreas por unidad, escala por juego), 30+ réplicas; considerar 100 para base vs mejorada.
+2. Fase 9: gráficas (`resultados/calibracion/llegadas_dia_semana.csv`, `resultados/optimizacion/historial.csv`). Luego UI e informe.

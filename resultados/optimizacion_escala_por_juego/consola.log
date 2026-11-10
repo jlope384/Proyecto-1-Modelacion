@@ -1,0 +1,24 @@
+Piso base {'tragamonedas': 100, 'blackjack': 4, 'ruleta': 1, 'dados': 1}  área 142  límite abandono 10%
+GA: población 20, generaciones 30, réplicas 10, escala por juego
+  gen  0  mejor {'tragamonedas': 100, 'blackjack': 4, 'ruleta': 1, 'dados': 1}  ingreso 973,965  abandono 9.15%  media pob -969,329  distintos 20  sims 200  46s
+  gen  1  mejor {'tragamonedas': 98, 'blackjack': 3, 'ruleta': 2, 'dados': 1}  ingreso 984,280  abandono 9.79%  media pob 431,520  distintos 15  sims 300  75s
+  gen  2  mejor {'tragamonedas': 84, 'blackjack': 5, 'ruleta': 1, 'dados': 2}  ingreso 1,023,740  abandono 9.94%  media pob 664,102  distintos 12  sims 340  87s
+  gen  3  mejor {'tragamonedas': 84, 'blackjack': 5, 'ruleta': 1, 'dados': 2}  ingreso 1,023,740  abandono 9.94%  media pob 883,057  distintos 13  sims 420  111s
+  gen  4  mejor {'tragamonedas': 84, 'blackjack': 5, 'ruleta': 1, 'dados': 2}  ingreso 1,023,740  abandono 9.94%  media pob 953,465  distintos 13  sims 460  123s
+  gen  5  mejor {'tragamonedas': 84, 'blackjack': 5, 'ruleta': 1, 'dados': 2}  ingreso 1,023,740  abandono 9.94%  media pob 975,913  distintos 12  sims 500  135s
+  gen  6  mejor {'tragamonedas': 84, 'blackjack': 5, 'ruleta': 1, 'dados': 2}  ingreso 1,023,740  abandono 9.94%  media pob 911,445  distintos 11  sims 530  143s
+  gen  7  mejor {'tragamonedas': 84, 'blackjack': 5, 'ruleta': 1, 'dados': 2}  ingreso 1,023,740  abandono 9.94%  media pob 924,742  distintos 11  sims 560  152s
+  gen  8  mejor {'tragamonedas': 84, 'blackjack': 5, 'ruleta': 1, 'dados': 2}  ingreso 1,023,740  abandono 9.94%  media pob 947,828  distintos 9  sims 570  155s
+  gen  9  mejor {'tragamonedas': 84, 'blackjack': 5, 'ruleta': 1, 'dados': 2}  ingreso 1,023,740  abandono 9.94%  media pob 983,017  distintos 8  sims 570  155s
+  gen 10  mejor {'tragamonedas': 84, 'blackjack': 5, 'ruleta': 1, 'dados': 2}  ingreso 1,023,740  abandono 9.94%  media pob 963,857  distintos 9  sims 570  155s
+
+Re-evaluación con 30 semillas nuevas:
+  {'tragamonedas': 100, 'blackjack': 4, 'ruleta': 1, 'dados': 1}  ingreso 869,295 ± 222,944  abandono 8.78% (base)
+  {'tragamonedas': 84, 'blackjack': 5, 'ruleta': 1, 'dados': 2}  ingreso 910,304 ± 234,747  abandono 9.36% <- elegido
+  {'tragamonedas': 96, 'blackjack': 3, 'ruleta': 1, 'dados': 2}  ingreso 879,261 ± 178,777  abandono 9.75%
+  {'tragamonedas': 90, 'blackjack': 4, 'ruleta': 1, 'dados': 2}  ingreso 879,232 ± 228,417  abandono 9.10%
+  {'tragamonedas': 86, 'blackjack': 5, 'ruleta': 2, 'dados': 1}  ingreso 905,919 ± 239,473  abandono 9.08%
+  {'tragamonedas': 88, 'blackjack': 3, 'ruleta': 2, 'dados': 2}  ingreso 875,106 ± 175,411  abandono 10.02%
+Mejorada - base: +41,009 (+4.7%), IC95 [-13,665, +95,682]
+Restricciones: {'area_solucion': 142, 'area_base': 142, 'area_igual': True, 'minimo_por_juego': True, 'abandono_reevaluado_dentro_del_limite': True, 'todos_los_evaluados_factibles': True}
+Archivos en resultados/optimizacion_escala_por_juego/  (207 s)

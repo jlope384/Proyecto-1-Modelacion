@@ -1,0 +1,25 @@
+grupo,metrica,juego_o_dia,periodo_real,rol,real,simulado,error_abs,error_rel_pct,unidad
+mezcla_ingreso,participación en el win de los 4 juegos (implícita),tragamonedas,2023,calibrado,82.029,80.72895810012066,-1.3000418998793322,-1.58485645305847,%
+mezcla_ingreso,participación en el win de los 4 juegos (implícita),blackjack,2023,validacion,10.5714,7.141830752932894,-3.429569247067106,-32.44195893701029,%
+mezcla_ingreso,participación en el win de los 4 juegos (implícita),ruleta,2023,validacion,3.6709,5.308368250283051,1.6374682502830509,44.60672451668667,%
+mezcla_ingreso,participación en el win de los 4 juegos (implícita),dados,2023,validacion,3.7287,6.820842896663394,3.092142896663394,82.92817595042224,%
+win_por_unidad,win por mesa / win por máquina,blackjack,2023,validacion,8.054372615435733,5.52900374810315,-2.525368867332583,-31.35401089456504,veces
+win_por_unidad,win por mesa / win por máquina,ruleta,2023,validacion,12.940480955591902,19.014089171504512,6.073608215912611,46.93494961088022,veces
+win_por_unidad,win por mesa / win por máquina,dados,2023,validacion,17.80627047487365,33.09742015085125,15.2911496759776,85.87508371028551,veces
+hold,hold de tragamonedas (win / jugado),tragamonedas,2023,validacion,7.17,7.464556959566121,0.2945569595661208,4.10818632588732,%
+mezcla_ingreso,participación en el win de los 4 juegos (implícita),tragamonedas,2024,validacion,82.5013,80.79066043387321,-1.7106395661267868,-2.0734698315381537,%
+mezcla_ingreso,participación en el win de los 4 juegos (implícita),blackjack,2024,validacion,10.5153,7.077575477477825,-3.437724522522175,-32.69259576542919,%
+mezcla_ingreso,participación en el win de los 4 juegos (implícita),ruleta,2024,validacion,3.4526000000000003,5.265305988232997,1.812705988232997,52.502635354022964,%
+mezcla_ingreso,participación en el win de los 4 juegos (implícita),dados,2024,validacion,3.5307,6.8664581004159615,3.3357581004159615,94.47866146701678,%
+win_por_unidad,win por mesa / win por máquina,blackjack,2024,validacion,8.0442396679812,5.52900374810315,-2.51523591987805,-31.267540795552637,veces
+win_por_unidad,win por mesa / win por máquina,ruleta,2024,validacion,12.209686048602196,19.014089171504512,6.8044031229023165,55.729550258839836,veces
+win_por_unidad,win por mesa / win por máquina,dados,2024,validacion,16.66557850148961,33.09742015085125,16.43184164936164,98.59748731730448,veces
+hold,hold de tragamonedas (win / jugado),tragamonedas,2024,validacion,7.211667,7.464556959566121,0.2528899595661205,3.5066782696167262,%
+llegadas_dia,factor del día (día / promedio semanal),lunes,2024,validacion,0.944,0.9343781171344053,-0.009621882865594622,-1.0192672527112947,veces
+llegadas_dia,factor del día (día / promedio semanal),martes,2024,validacion,0.9306,0.8773095898065569,-0.05329041019344305,-5.726457145222765,veces
+llegadas_dia,factor del día (día / promedio semanal),miercoles,2024,validacion,0.8849,0.8465322147799044,-0.03836778522009565,-4.335832887342711,veces
+llegadas_dia,factor del día (día / promedio semanal),jueves,2024,validacion,0.8703,0.8581337754609377,-0.012166224539062243,-1.397934567282804,veces
+llegadas_dia,factor del día (día / promedio semanal),viernes,2024,validacion,0.9823,0.9673986035237866,-0.014901396476213358,-1.5169903772995377,veces
+llegadas_dia,factor del día (día / promedio semanal),sabado,2024,validacion,1.2291,1.3048689179882704,0.07576891798827035,6.164585305367369,veces
+llegadas_dia,factor del día (día / promedio semanal),domingo,2024,validacion,1.1588,1.2113787813061392,0.05257878130613913,4.537347368496646,veces
+llegadas_nivel,sesiones por día y sucursal,todas,2024,validacion,2702.0,2336.49,-365.5100000000002,-13.527387120651378,sesiones / día

@@ -14,7 +14,11 @@ ruleta = Roulette, dados = Craps, tragamonedas = fila Total de Slot Machines):
 - mezcla_ingreso_4juegos: win del juego / suma del win de los cuatro juegos
   (lo comparable con el simulador, que solo tiene esos cuatro).
 - win_por_unidad_mes_miles: win del periodo / unidades promedio / meses.
-- unidades_por_local: promedio mensual de unidades / locales.
+- unidades_por_local: promedio mensual de unidades / locales. OJO: cada juego
+  tiene su propio número de locales (tragamonedas ~310, mesas ~100), así que
+  estas cifras NO describen un mismo piso.
+- unidades_estatales: promedio mensual de unidades en todo el estado. Es la
+  composición con la que se calcula la mezcla de ingreso.
 - win_pct: win percent de Nevada. En tragamonedas es win / dinero jugado
   (comparable con el hold del simulador); en mesas es sobre el drop (NO
   comparable, solo informativo).
@@ -44,6 +48,7 @@ UNIDAD = {
     "mezcla_ingreso_4juegos": "fraccion",
     "win_por_unidad_mes_miles": "miles USD / unidad / mes",
     "unidades_por_local": "unidades / local",
+    "unidades_estatales": "unidades",
     "win_pct": "%",
 }
 
@@ -76,6 +81,7 @@ def metricas_de(meses_filas):
         out[("win_por_unidad_mes_miles", juego)] = win / unidades_prom / n
         out[("unidades_por_local", juego)] = statistics.mean(
             m[clave]["unidades"] / m[clave]["locales"] for m in meses_filas)
+        out[("unidades_estatales", juego)] = unidades_prom
         out[("win_pct", juego)] = statistics.mean(m[clave]["win_pct"] for m in meses_filas)
     return out
 
@@ -104,7 +110,7 @@ def main(entrada, salida):
             })
     Path(salida).parent.mkdir(parents=True, exist_ok=True)
     with open(salida, "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=list(filas[0].keys()))
+        w = csv.DictWriter(f, fieldnames=list(filas[0].keys()), lineterminator="\n")
         w.writeheader()
         w.writerows(filas)
     print(f"{len(filas)} filas en {salida}")
