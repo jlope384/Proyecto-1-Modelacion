@@ -48,11 +48,27 @@ En la Fase 6 el modelo sobreestima la rentabilidad de dados (+99%) y ruleta (+56
 - **El GA llega al mismo reparto** (84 / 5 / 1 / 2). La recomendación no depende del error de calibración por juego.
 - La mejora es menor: +41,009 (+4.7%), IC95 [−13,665, +95,682]. Con 30 réplicas **no es significativa** bajo esta calibración. La Fase 8 debería usar más réplicas (por ejemplo 100) para esta comparación.
 
+## Sensibilidad al área por unidad
+
+El área de cada mesa en máquinas (blackjack 6, ruleta 8, dados 10) es una estimación sin fuente y define el trade-off que optimiza el GA. Se volvió a correr el GA completo con mesas 25 % más chicas y 25 % más grandes (redondeado a enteros). El área total es la del mismo piso base con esas áreas. Script de comparación: `src/experimentos/sensibilidad_area.py` (100 réplicas pareadas, semillas 7001–7100, reutiliza las de la Fase 8).
+
+| Áreas BJ/ruleta/dados | Área total | Reparto del GA | Mejora de ingreso (100 réplicas) | Abandono | ¿Cabe 84/5/1/2? |
+|---|---|---|---|---|---|
+| 5/6/8 (−25 %) | 134 | 76/6/2/2 | +7.6 %, IC95 [+5.2, +10.1] | 9.82 % | Sí (131) |
+| 6/8/10 (modelo) | 142 | 84/5/1/2 | +5.8 %, IC95 [+3.4, +8.2] | 9.67 % | Sí (142) |
+| 8/10/13 (+25 %) | 155 | 95/3/1/2 | +3.3 %, IC95 [+0.8, +5.9] | 10.13 % | No (160) |
+
+- **Lo robusto:** en los tres escenarios el GA pone una segunda mesa de dados y la mejora es significativa.
+- **Lo que depende del área:** cuántas mesas de blackjack y ruleta. Con mesas más chicas conviene más mesas (6 blackjack, 2 ruletas); con más grandes, menos (3 blackjack).
+- Con mesas 25 % más grandes el reparto elegido queda en 10.13 % de abandono con 100 réplicas, apenas sobre el límite; en la re-evaluación de 30 réplicas del GA era 9.96 %. El óptimo está pegado a la restricción.
+- Si las mesas fueran 25 % más grandes, 84/5/1/2 no cabría (ocuparía 160 de 155).
+- `genetico.py` acepta `--area blackjack=…,ruleta=…,dados=…` (enteros) y guarda cada simulación en `cache_simulaciones.jsonl` de su carpeta, así que una corrida interrumpida se retoma con el mismo comando. Con las áreas por defecto el resultado es idéntico al de antes (verificado con `--prueba`).
+
 ## Limitaciones a declarar
 
 - **Fitness ruidoso:** 10 réplicas por individuo. Se mitiga con números aleatorios comunes, caché y re-evaluación con semillas nuevas, pero el GA puede descartar por ruido configuraciones cercanas al óptimo.
 - **Óptimo pegado a la restricción de abandono**, que no tiene referencia real (es un supuesto con paciencia de 8 min). Si la paciencia o la llegada cambian, el reparto puede cambiar: lo prueba la sensibilidad de la Fase 8.
-- **Válido solo en el rango calibrado:** demanda por juego fija (proporcional al piso base), 3 sesiones por visitante, áreas por unidad estimadas.
+- **Válido solo en el rango calibrado:** demanda por juego fija (proporcional al piso base), 3 sesiones por visitante, áreas por unidad estimadas (probadas con ±25 %, ver arriba).
 - **El espacio es pequeño** (3 genes libres; unas pocas centenas de configuraciones con sentido). El GA se justifica porque cada evaluación es cara y ruidosa, y porque la misma implementación escala a más juegos o restricciones.
 
 ## Archivos de salida

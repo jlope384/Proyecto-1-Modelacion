@@ -1,0 +1,99 @@
+/* Complementos de panel.css para la versión conectada a la API. */
+.pf input,
+.f input {
+  height: 40px;
+}
+.f {
+  grid-template-columns: 1fr 96px 84px;
+}
+.f .r.ro {
+  text-align: right;
+  color: #cdbdea;
+}
+.btnrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.trk .fill.over {
+  background: #f060c0;
+}
+details.tabla {
+  margin-top: 14px;
+}
+details.tabla summary {
+  cursor: pointer;
+  color: #e6d2fb;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  padding: 6px 0;
+}
+.sub {
+  display: block;
+  color: #cdbdea;
+  font-size: 12px;
+}
+.log {
+  max-height: 180px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 12px;
+}
+.gm .gh .sub {
+  display: inline;
+  margin-left: 8px;
+}
+.cb > .chart + .chart {
+  margin-top: 28px;
+}
+td .chip,
+td .vd {
+  vertical-align: middle;
+}
+.nota {
+  color: #cdbdea;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+/* La cabecera (logo + 7 pestañas) ocupa dos filas en 1440 px: el hero deja
+   espacio para que no tape el subtítulo. */
+.hero {
+  padding-top: 200px;
+}
+.stat .s .chip {
+  white-space: normal;
+  height: auto;
+  min-height: 22px;
+  padding: 3px 8px;
+}
+
+/* Pantallas angostas: la cabecera deja de ir encima del hero para que las
+   pestañas, al acomodarse en varias filas, no tapen el título. */
+@media (max-width: 900px) {
+  body:not(.escritorio) .top {
+    position: relative;
+    background: #09050f;
+    padding: 6px 16px 0;
+  }
+  body:not(.escritorio) .hero {
+    padding: 40px 20px 48px;
+    min-height: 0;
+  }
+  body:not(.escritorio) .nav {
+    width: 100%;
+  }
+  body:not(.escritorio) .tab {
+    flex: 1 1 auto;
+    font-size: 17px;
+    padding: 0 12px;
+  }
+  body:not(.escritorio) .wrap {
+    padding: 24px 16px 56px;
+  }
+}
+td.n {
+  white-space: nowrap;
+}

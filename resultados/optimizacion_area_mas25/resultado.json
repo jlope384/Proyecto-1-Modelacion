@@ -1,0 +1,289 @@
+{
+ "parametros_ga": {
+  "poblacion": 20,
+  "generaciones_max": 30,
+  "generaciones_corridas": 12,
+  "prob_cruce": 0.9,
+  "prob_mutacion": 0.3,
+  "torneo": 3,
+  "elite": 2,
+  "estancamiento": 8,
+  "lambda_penalizacion": 10.0,
+  "semilla_ga": 7,
+  "replicas_fitness": 10,
+  "semillas_fitness": [
+   5001,
+   5002,
+   5003,
+   5004,
+   5005,
+   5006,
+   5007,
+   5008,
+   5009,
+   5010
+  ],
+  "replicas_reevaluacion": 30,
+  "semillas_reevaluacion": [
+   6001,
+   6002,
+   6003,
+   6004,
+   6005,
+   6006,
+   6007,
+   6008,
+   6009,
+   6010,
+   6011,
+   6012,
+   6013,
+   6014,
+   6015,
+   6016,
+   6017,
+   6018,
+   6019,
+   6020,
+   6021,
+   6022,
+   6023,
+   6024,
+   6025,
+   6026,
+   6027,
+   6028,
+   6029,
+   6030
+  ],
+  "escala_bankroll_mesas": 18.010441734156768
+ },
+ "area_por_unidad": {
+  "tragamonedas": 1,
+  "blackjack": 8,
+  "ruleta": 10,
+  "dados": 13
+ },
+ "area_total": 155,
+ "configuraciones_evaluadas": 60,
+ "simulaciones": 750,
+ "mejor_en_fitness": {
+  "conteos": {
+   "tragamonedas": 95,
+   "blackjack": 3,
+   "ruleta": 1,
+   "dados": 2
+  },
+  "fitness": 1035967.056916195,
+  "ingreso_media": 1054570.3077416995,
+  "ingreso_desv": 205251.53344833336,
+  "ingreso_ic95": [
+   927354.0893096619,
+   1181786.5261737371
+  ],
+  "abandono_media": 0.10189961825656499,
+  "abandono_desv": 0.012655633248290504,
+  "espera_media_min": 0.517044029397937,
+  "utilizacion": {
+   "tragamonedas": 0.41209903675914533,
+   "blackjack": 0.6419239797375129,
+   "ruleta": 0.5534339248839129,
+   "dados": 0.38160119481623533
+  },
+  "replicas": 10
+ },
+ "reevaluacion": [
+  {
+   "conteos": {
+    "tragamonedas": 100,
+    "blackjack": 4,
+    "ruleta": 1,
+    "dados": 1
+   },
+   "fitness_ga": 979315.2261625538,
+   "ingreso_media": 931568.691396379,
+   "ingreso_desv": 173560.46776054412,
+   "ingreso_ic95": [
+    869460.875651095,
+    993676.5071416631
+   ],
+   "abandono_media": 0.087820003677261,
+   "abandono_desv": 0.009805199105332762,
+   "espera_media_min": 0.43191423070019574,
+   "utilizacion": {
+    "tragamonedas": 0.38515598302312176,
+    "blackjack": 0.5775779760171179,
+    "ruleta": 0.5460790176213216,
+    "dados": 0.5827909193778726
+   },
+   "replicas": 30
+  },
+  {
+   "conteos": {
+    "tragamonedas": 95,
+    "blackjack": 3,
+    "ruleta": 1,
+    "dados": 2
+   },
+   "fitness_ga": 1035967.056916195,
+   "ingreso_media": 969930.0504217789,
+   "ingreso_desv": 150264.63004053556,
+   "ingreso_ic95": [
+    916158.543142444,
+    1023701.5577011139
+   ],
+   "abandono_media": 0.09961002493297902,
+   "abandono_desv": 0.009016889393116833,
+   "espera_media_min": 0.5075286470170571,
+   "utilizacion": {
+    "tragamonedas": 0.40034305736036335,
+    "blackjack": 0.6520515819155442,
+    "ruleta": 0.5451798359285539,
+    "dados": 0.38702415145373
+   },
+   "replicas": 30
+  },
+  {
+   "conteos": {
+    "tragamonedas": 87,
+    "blackjack": 4,
+    "ruleta": 1,
+    "dados": 2
+   },
+   "fitness_ga": 1026386.2486984179,
+   "ingreso_media": 960194.6101555125,
+   "ingreso_desv": 178511.52131812443,
+   "ingreso_ic95": [
+    896315.0826485184,
+    1024074.1376625065
+   ],
+   "abandono_media": 0.09802336788703633,
+   "abandono_desv": 0.010054962948451434,
+   "espera_media_min": 0.5682833644840894,
+   "utilizacion": {
+    "tragamonedas": 0.42771177674837174,
+    "blackjack": 0.5771354379160664,
+    "ruleta": 0.5456228216358656,
+    "dados": 0.38737450159870157
+   },
+   "replicas": 30
+  },
+  {
+   "conteos": {
+    "tragamonedas": 98,
+    "blackjack": 3,
+    "ruleta": 2,
+    "dados": 1
+   },
+   "fitness_ga": 999341.9111269523,
+   "ingreso_media": 943156.7244956724,
+   "ingreso_desv": 148069.2804588429,
+   "ingreso_ic95": [
+    890170.8129748392,
+    996142.6360165055
+   ],
+   "abandono_media": 0.09564615932116213,
+   "abandono_desv": 0.009924153929409743,
+   "espera_media_min": 0.46883446288345737,
+   "utilizacion": {
+    "tragamonedas": 0.39078866669091744,
+    "blackjack": 0.6521110489682874,
+    "ruleta": 0.36672654305253094,
+    "dados": 0.5818546002648056
+   },
+   "replicas": 30
+  },
+  {
+   "conteos": {
+    "tragamonedas": 90,
+    "blackjack": 4,
+    "ruleta": 2,
+    "dados": 1
+   },
+   "fitness_ga": 990729.6110470479,
+   "ingreso_media": 937298.3853236058,
+   "ingreso_desv": 174850.06470865666,
+   "ingreso_ic95": [
+    874729.0932371219,
+    999867.6774100898
+   ],
+   "abandono_media": 0.09268361002278976,
+   "abandono_desv": 0.010332798435367777,
+   "espera_media_min": 0.5240233450701508,
+   "utilizacion": {
+    "tragamonedas": 0.4174894593583142,
+    "blackjack": 0.5773877768879088,
+    "ruleta": 0.3671673355584743,
+    "dados": 0.5825953022826911
+   },
+   "replicas": 30
+  }
+ ],
+ "base": {
+  "conteos": {
+   "tragamonedas": 100,
+   "blackjack": 4,
+   "ruleta": 1,
+   "dados": 1
+  },
+  "ingreso_media": 931568.691396379,
+  "ingreso_desv": 173560.46776054412,
+  "ingreso_ic95": [
+   869460.875651095,
+   993676.5071416631
+  ],
+  "abandono_media": 0.087820003677261,
+  "abandono_desv": 0.009805199105332762,
+  "espera_media_min": 0.43191423070019574,
+  "utilizacion": {
+   "tragamonedas": 0.38515598302312176,
+   "blackjack": 0.5775779760171179,
+   "ruleta": 0.5460790176213216,
+   "dados": 0.5827909193778726
+  },
+  "replicas": 30
+ },
+ "mejorada": {
+  "conteos": {
+   "tragamonedas": 95,
+   "blackjack": 3,
+   "ruleta": 1,
+   "dados": 2
+  },
+  "ingreso_media": 969930.0504217789,
+  "ingreso_desv": 150264.63004053556,
+  "ingreso_ic95": [
+   916158.543142444,
+   1023701.5577011139
+  ],
+  "abandono_media": 0.09961002493297902,
+  "abandono_desv": 0.009016889393116833,
+  "espera_media_min": 0.5075286470170571,
+  "utilizacion": {
+   "tragamonedas": 0.40034305736036335,
+   "blackjack": 0.6520515819155442,
+   "ruleta": 0.5451798359285539,
+   "dados": 0.38702415145373
+  },
+  "replicas": 30
+ },
+ "diferencia_mejorada_menos_base": {
+  "ingreso_media": 38361.35902540001,
+  "ingreso_desv": 130193.88041468254,
+  "ingreso_ic95": [
+   -8227.922740737755,
+   84950.64079153776
+  ],
+  "ingreso_pct": 4.117931332352752,
+  "abandono_pp": 1.1790021255718015
+ },
+ "comprobacion_restricciones": {
+  "area_solucion": 155,
+  "area_base": 155,
+  "area_igual": true,
+  "minimo_por_juego": true,
+  "abandono_reevaluado_dentro_del_limite": true,
+  "todos_los_evaluados_factibles": true
+ },
+ "segundos": 90.55982971191406
+}

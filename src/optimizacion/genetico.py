@@ -4,6 +4,11 @@ Uso (desde la raíz del repo, después de src/calibracion/calibrar.py):
     python src/optimizacion/genetico.py --prueba        # corrida corta de humo
     python src/optimizacion/genetico.py                 # corrida completa
     python src/optimizacion/genetico.py --escala-por-juego --salida ga_escala_por_juego
+    python src/optimizacion/genetico.py --area blackjack=8,ruleta=10,dados=13 --salida optimizacion_area_mas25
+
+Cada simulación se guarda al terminar en resultados/<salida>/cache_simulaciones.jsonl.
+Si la corrida se interrumpe, volver a lanzar el mismo comando la retoma: el GA
+es determinista (misma semilla) y reutiliza lo ya simulado.
 
 Pregunta: con la misma área total del piso, ¿qué reparto de tragamonedas,
 blackjack, ruleta y dados maximiza el ingreso diario sin que el abandono
@@ -62,6 +67,12 @@ from modelo import escenario as esc  # noqa: E402
 GENES = esc.JUEGOS          # orden del cromosoma
 MESAS = esc.MESAS           # genes que muta el GA; tragamonedas se deriva
 
+# Área por unidad que usa la restricción. Por defecto la del escenario; la
+# sensibilidad al área la cambia con --area. La simulación de un día no usa
+# el área (solo decide qué repartos son válidos), así que los procesos que
+# simulan no necesitan este valor.
+AREA = dict(esc.AREA)
+
 # Parámetros por defecto, con su justificación (ver docs-proyecto2/genetico.md)
 POBLACION = 20              # pocas variables (3 libres): 20 cubre bien el espacio
 GENERACIONES = 30
@@ -93,7 +104,7 @@ def a_dict(cromosoma):
 
 
 def area(cromosoma):
-    return esc.area(a_dict(cromosoma))
+    return sum(AREA[j] * x for j, x in zip(GENES, cromosoma))
 
 
 def factible(cromosoma, area_total, minimo=esc.MINIMO_UNIDADES):
@@ -111,15 +122,15 @@ def reparar(mesas, area_total, aleatorio, minimo=esc.MINIMO_UNIDADES):
     """
     mesas = {j: max(minimo, int(mesas[j])) for j in MESAS}
     while True:
-        libre = area_total - sum(esc.AREA[j] * mesas[j] for j in MESAS)
-        if libre >= minimo * esc.AREA["tragamonedas"]:
+        libre = area_total - sum(AREA[j] * mesas[j] for j in MESAS)
+        if libre >= minimo * AREA["tragamonedas"]:
             break
         candidatas = [j for j in MESAS if mesas[j] > minimo]
         if not candidatas:
             raise ValueError("el área no alcanza ni para el mínimo de cada juego")
-        pesos = [esc.AREA[j] * mesas[j] for j in candidatas]
+        pesos = [AREA[j] * mesas[j] for j in candidatas]
         mesas[aleatorio.choices(candidatas, weights=pesos)[0]] -= 1
-    maquinas = libre // esc.AREA["tragamonedas"]
+    maquinas = libre // AREA["tragamonedas"]
     return a_tupla(dict(mesas, tragamonedas=maquinas))
 
 
@@ -198,7 +209,7 @@ def resumir(filas):
 class Evaluador:
     """Evalúa cromosomas en paralelo y guarda en caché (mismas semillas -> mismo resultado)."""
 
-    def __init__(self, parametros, semillas, pool, limite, lam):
+    def __init__(self, parametros, semillas, pool, limite, lam, ruta_cache=None):
         self.parametros = parametros
         self.semillas = semillas
         self.pool = pool
@@ -207,6 +218,35 @@ class Evaluador:
         self.ingreso_ref = None
         self.cache = {}
         self.simulaciones = 0
+        # Caché en disco por (cromosoma, semilla): permite retomar una corrida
+        # interrumpida sin repetir simulaciones.
+        self.ruta_cache = ruta_cache
+        self.sims = {}
+        if ruta_cache and Path(ruta_cache).exists():
+            with open(ruta_cache, encoding="utf-8") as f:
+                for linea in f:
+                    if linea.strip():
+                        c, s, ing, ab, es, ut = json.loads(linea)
+                        self.sims[(tuple(c), s)] = (tuple(c), s, ing, ab, es, ut)
+        self.reutilizadas = 0
+
+    def simular_lote(self, trabajos):
+        """Corre los (parametros, cromosoma, semilla) que no estén en la caché y devuelve todas las filas."""
+        faltan = [t for t in trabajos if (t[1], t[2]) not in self.sims]
+        self.reutilizadas += len(trabajos) - len(faltan)
+        if faltan:
+            f = open(self.ruta_cache, "a", encoding="utf-8") if self.ruta_cache else None
+            try:
+                for fila in self.pool.imap_unordered(_simular, faltan, chunksize=1):
+                    self.sims[(fila[0], fila[1])] = fila
+                    if f:
+                        f.write(json.dumps(list(fila)) + "\n")
+                        f.flush()
+            finally:
+                if f:
+                    f.close()
+        self.simulaciones += len(faltan)
+        return [self.sims[(t[1], t[2])] for t in trabajos]
 
     def fitness(self, res):
         exceso = max(0.0, res["abandono_media"] - self.limite)
@@ -216,8 +256,7 @@ class Evaluador:
         nuevos = [c for c in dict.fromkeys(cromosomas) if c not in self.cache]
         if nuevos:
             trabajos = [(self.parametros, c, s) for c in nuevos for s in self.semillas]
-            filas = self.pool.map(_simular, trabajos)
-            self.simulaciones += len(trabajos)
+            filas = self.simular_lote(trabajos)
             por_c = {}
             for f in filas:
                 por_c.setdefault(f[0], []).append(f)
@@ -299,7 +338,19 @@ def main():
     ap.add_argument("--escala-por-juego", action="store_true",
                     help="usar la calibración alternativa (una escala por mesa)")
     ap.add_argument("--salida", default="optimizacion")
+    ap.add_argument("--area", default=None,
+                    help="área por unidad de las mesas, p. ej. blackjack=8,ruleta=10,dados=13 "
+                         "(enteros; la máquina vale 1). Sensibilidad al supuesto de área")
     args = ap.parse_args()
+    if args.area:
+        for par in args.area.split(","):
+            juego, valor = par.split("=")
+            juego = juego.strip()
+            if juego not in MESAS:
+                ap.error(f"juego inválido en --area: {juego}")
+            if int(valor) != float(valor) or int(valor) < 1:
+                ap.error("las áreas deben ser enteros positivos (la máquina vale 1)")
+            AREA[juego] = int(valor)
     if args.prueba:
         args.poblacion, args.generaciones, args.replicas = 6, 3, 3
         args.replicas_reevaluacion = 5
@@ -311,7 +362,10 @@ def main():
     if args.escala_por_juego:
         parametros["escala_bankroll_mesas"] = parametros["alternativa_escala_por_juego"]
     base = a_tupla(parametros["piso_base"])
-    area_total = parametros["area_base"]
+    # Área disponible = la del piso base con el área por unidad vigente.
+    area_total = area(base)
+    if not args.area:
+        assert area_total == parametros["area_base"], "el área base no coincide con parametros.json"
     limite = parametros["limite_abandono"]
     assert factible(base, area_total), "el piso base no cumple sus propias restricciones"
 
@@ -320,12 +374,13 @@ def main():
     sem_fit = [SEMILLAS_FITNESS + i for i in range(args.replicas)]
     sem_re = [SEMILLAS_REEVALUACION + i for i in range(args.replicas_reevaluacion)]
 
-    print(f"Piso base {a_dict(base)}  área {area_total}  límite abandono {limite:.0%}")
+    print(f"Piso base {a_dict(base)}  área {area_total} (por unidad {AREA})  límite abandono {limite:.0%}")
     print(f"GA: población {args.poblacion}, generaciones {args.generaciones}, réplicas {args.replicas}, "
           f"escala {'por juego' if args.escala_por_juego else 'única'}")
 
     with Pool(args.procesos) as pool:
-        ev = Evaluador(parametros, sem_fit, pool, limite, LAMBDA_PENALIZACION)
+        ev = Evaluador(parametros, sem_fit, pool, limite, LAMBDA_PENALIZACION,
+                       ruta_cache=salida / "cache_simulaciones.jsonl")
         ev.ingreso_ref = 0.0
         ev.evaluar([base])
         ev.ingreso_ref = ev.cache[base]["ingreso_media"]
@@ -345,7 +400,7 @@ def main():
         ranking = sorted(ev.cache, key=lambda c: ev.fitness(ev.cache[c]), reverse=True)
         candidatos = list(dict.fromkeys([base] + ranking[:CANDIDATOS_REEVALUACION]))
         trabajos = [(parametros, c, s) for c in candidatos for s in sem_re]
-        filas = pool.map(_simular, trabajos)
+        filas = ev.simular_lote(trabajos)
     re = {c: resumir([f for f in filas if f[0] == c]) for c in candidatos}
 
     factibles = [c for c in candidatos if re[c]["abandono_media"] <= limite]
@@ -398,9 +453,10 @@ def main():
             "semillas_reevaluacion": sem_re,
             "escala_bankroll_mesas": parametros["escala_bankroll_mesas"],
         },
-        "area_por_unidad": esc.AREA,
+        "area_por_unidad": dict(AREA),
+        "area_total": area_total,
         "configuraciones_evaluadas": len(ev.cache),
-        "simulaciones": ev.simulaciones + len(trabajos),
+        "simulaciones": ev.simulaciones + ev.reutilizadas,
         "mejor_en_fitness": {"conteos": a_dict(mejor), "fitness": mejor_f, **ev.cache[mejor]},
         "reevaluacion": [{"conteos": a_dict(c), "fitness_ga": ev.fitness(ev.cache[c]), **re[c]}
                          for c in candidatos],

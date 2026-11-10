@@ -290,6 +290,7 @@ def simular_dia(horas=24.0, metodo="inversa", semilla=None, recursos=None, pesos
     esperas_min = []
     tiempos_sistema_min = []
     abandonos = 0
+    abandonos_por_hora = [0] * 24
     atendidos = 0
     ingreso_por_juego = {r: 0.0 for r in recursos}
     apostado_por_juego = {r: 0.0 for r in recursos}
@@ -394,6 +395,7 @@ def simular_dia(horas=24.0, metodo="inversa", semilla=None, recursos=None, pesos
                 cliente["estado"] = "abandono"
                 estado[cliente["juego"]]["cola"].remove(cliente)
                 abandonos += 1
+                abandonos_por_hora[int(t) % 24] += 1
                 acum["en_sistema"] -= 1
 
     tiempo_total = max(horas, acum["t_prev"], 1e-9)
@@ -422,6 +424,7 @@ def simular_dia(horas=24.0, metodo="inversa", semilla=None, recursos=None, pesos
 
         "atendidos": atendidos,
         "abandonos": abandonos,
+        "abandonos_por_hora": abandonos_por_hora,
         "prob_abandono": abandonos / llegadas_totales if llegadas_totales else 0.0,
         "prob_congestion": (
             sum(1 for w in esperas_min if w > 1e-9) / atendidos if atendidos else 0.0

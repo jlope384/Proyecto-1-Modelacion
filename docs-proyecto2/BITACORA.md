@@ -2,9 +2,9 @@
 
 Registro de lo hecho sobre el código del Proyecto 1, para retomar sin releer el chat. Branch: `proyecto-2` (sale de `main` en `bcc1540`; `main` no se tocó). Plan seguido: `PLAN_IMPLEMENTACION.md`. Instrucciones de origen: `02_instrucciones_reutilizar_codigo.md`.
 
-**Estado: Fases 0–7 del documento 02 terminadas. Sigue la Fase 8 (experimentos).**
+**Estado: Fases 0–9 del documento 02 terminadas y UI nueva (handoff de diseño) conectada a la API. Sigue la Fase 10 (README, informe, presentación).**
 
-Cómo ejecutar: desde `backend/`, `.venv/bin/python -m casino.piso` (autochequeo) y `.venv/bin/python app.py` (API en :5000); `cd frontend && npm run dev` (:5173). Scripts sueltos necesitan `PYTHONPATH=.` desde `backend/`.
+Cómo ejecutar: desde `backend/`, `.venv/bin/python -m casino.piso` (autochequeo) y `.venv/bin/python app.py` (API en :5000); `cd frontend && npm run dev` (:5173). Los scripts de `src/` se corren desde la raíz. Dependencias de análisis en `requirements.txt` de la raíz (Flask y matplotlib).
 
 ## Fase 0 — Línea base (commit `línea base P1`)
 
@@ -97,7 +97,56 @@ Detalle en `genetico.md`. Script `src/optimizacion/genetico.py`, pruebas `tests/
 - **Resultado:** base 100/4/1/1 → mejorada **84/5/1/2**: ingreso +5.5% (IC95 +11.6k a +91.2k), abandono 8.78% → 9.36%. Área 142 comprobada por código.
 - Con la calibración por juego el GA llega al **mismo reparto**, mejora +4.7% pero no significativa con 30 réplicas.
 
+## Fase 8 — Experimentos
+
+Detalle en `experimentos.md`. Script `src/experimentos/correr.py`, salidas en `resultados/experimentos/`.
+
+- Base 100/4/1/1 contra mejorada 84/5/1/2 con las mismas semillas (CRN, `flujos_por_cliente=True`): principal y calibración por juego con 100 réplicas; llegadas ×0.8/1.2/1.4 y paciencia 4/12 min con 30. 700 días simulados, semillas desde 7001.
+- **Resultado principal:** +5.8 % de ingreso, IC95 [+3.4, +8.2] %, abandono 9.11 % → 9.67 %. Con calibración por juego +3.3 %, IC95 [+0.1, +6.4] %: significativa con 100 réplicas.
+- Con llegadas +20 % y +40 % ninguno de los dos pisos cumple el 10 % de abandono; con paciencia 4 min la mejorada queda en 10.13 %.
+- Consistencia: conservación en las 700 réplicas, Little con error máximo 1.85 %.
+- `comparacion_real.json`: tabla Real (2024) / Base / Mejorada con MAE, y filas estimadas (abandono, espera, ingreso) sin referencia real.
+- Cada réplica se guarda al terminar en `replicas.jsonl`; el script retoma lo que falta.
+
+## Fase 9 — Gráficas
+
+- `src/visualizacion/graficas.py` (matplotlib, solo lee `resultados/`) → 6 PNG en `resultados/graficas/`: llegadas por día, comparación real, convergencia del GA, base contra mejorada, sensibilidad y diferencias pareadas.
+
+## UI nueva (handoff de diseño `casino-panel-handoff`)
+
+- Se borró la UI vieja de P1 (pestañas jugables, saldo, `App.css`, `components/`, `hooks/`, `utils/`) y se reescribió `frontend/src` con el diseño del handoff (`styles/panel.css` + `styles/extra.css`, imágenes en `src/assets/`), en React + Vite + Chart.js.
+- Pestañas y conexión con Python:
+
+| Pestaña | Ruta | Parte del proyecto |
+|---|---|---|
+| El piso | `POST /api/piso` | `casino/piso.py` con los parámetros calibrados (`escenario.argumentos`) |
+| Armar piso | `GET /api/config`, `POST /api/piso` | Área por unidad del modelo, win por unidad de la Fase 8; botón que simula la configuración |
+| Datos reales | `GET /api/datos/referencia` | `comparacion_real.json` (Fase 8) y `llegadas_dia_semana.csv` (Fase 6) |
+| Optimización | `GET /api/optimizacion/resultado`, `POST /api/optimizacion/correr`, `GET /api/optimizacion/estado` | `resultado.json` e `historial.csv` (Fase 7); la versión mini lanza `genetico.py --prueba` (~30 s) |
+| Escenarios | `GET /api/escenarios` | `escenarios.json` (Fase 8) |
+| Validación | `GET /api/validacion` | `validacion.validar_lcg`, `validar_replicado` por juego (100 semillas), Little y conservación (Fase 8), hold teórico contra simulado |
+| Fuentes | — | Estático: datasets, supuestos, uso de IA y reproducción |
+
+- `backend/app.py` se reescribió: solo quedan las rutas de arriba y `/api/salud`. Las rutas de juegos interactivos y el saldo se quitaron. Cada GET devuelve 404 con el comando que genera el archivo si falta.
+- Hold teórico contra simulado: prueba z sobre ingreso − h₀·apostado por día (100 días del piso base); los cuatro juegos pasan con |z| ≤ 1.96.
+- `casino/piso.py` agrega `abandonos_por_hora` a la salida (no consume números aleatorios; la línea base no cambia).
+- `backend/casino/__init__.py` (ignorado por git) todavía importaba `carreras`; se quitó esa línea porque rompía `from casino import ...`.
+- Verificado: `npm run build` limpio, API probada con el cliente de Flask y a través del proxy de Vite, versión mini del GA de punta a punta, y capturas de las 7 pestañas con datos reales de la API.
+- Pendiente de la UI: confirmar el derecho de uso de las fotos de `src/assets/` (eran capturas de referencia del handoff) y completar en Fuentes quién revisó lo generado con IA.
+
+## Sensibilidad al área por unidad
+
+- `genetico.py`: nuevo `--area blackjack=…,ruleta=…,dados=…` (enteros) y caché en disco por simulación (`cache_simulaciones.jsonl`) para retomar corridas. Con áreas por defecto el resultado de `--prueba` es idéntico al anterior; las 4 pruebas siguen OK.
+- GA completo con mesas −25 % (5/6/8) → **76/6/2/2** y +25 % (8/10/13) → **95/3/1/2**. Salidas en `resultados/optimizacion_area_menos25/` y `resultados/optimizacion_area_mas25/`.
+- `src/experimentos/sensibilidad_area.py`: compara cada reparto con la base con las 100 semillas de la Fase 8 (reutiliza réplicas) → +7.6 %, +5.8 % y +3.3 %, las tres significativas. Con mesas más grandes el abandono queda en 10.13 % y 84/5/1/2 no cabe.
+- Conclusión: la segunda mesa de dados es robusta; el número de mesas de blackjack y ruleta depende del área supuesta.
+- Panel: tarjeta nueva en Escenarios (`/api/escenarios` agrega `sensibilidad_area`); gráfica `7_sensibilidad_area.png`.
+
+## Panel: barras en prisma y guion
+
+- `frontend/src/components/charts.jsx`: plugin de Chart.js que dibuja cada barra vertical como prisma (cara frontal, lateral oscura, tapa en rombo) sobre una columna fantasma de alto completo. Tooltip y leyenda siguen siendo los de Chart.js. Las PNG de `resultados/graficas/` siguen planas (son para el informe impreso).
+- `guion_presentacion.md`: guion de 15 minutos para 4 personas, con demostración y preguntas de defensa.
+
 ## Siguiente
 
-1. Fase 8: experimentos con `escenario.simular` (base, mejorada 84/5/1/2, llegadas +20%, paciencia 50–150%, áreas por unidad, escala por juego), 30+ réplicas; considerar 100 para base vs mejorada.
-2. Fase 9: gráficas (`resultados/calibracion/llegadas_dia_semana.csv`, `resultados/optimizacion/historial.csv`). Luego UI e informe.
+1. Fase 10: reescribir `README.md` (todavía describe P1), informe PDF y presentación de 15 minutos.

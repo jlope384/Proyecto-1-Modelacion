@@ -19,3 +19,9 @@ datos/crudos/nevada/*.pdf
 
 # Material local del equipo
 docs para no commitear/
+
+# Corridas de demostración del GA (pestaña Optimización)
+resultados/optimizacion_prueba/
+
+# macOS
+.DS_Store
