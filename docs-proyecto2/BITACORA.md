@@ -2,7 +2,7 @@
 
 Registro de lo hecho sobre el código del Proyecto 1, para retomar sin releer el chat. Branch: `proyecto-2` (sale de `main` en `bcc1540`; `main` no se tocó). Plan seguido: `PLAN_IMPLEMENTACION.md`. Instrucciones de origen: `02_instrucciones_reutilizar_codigo.md`.
 
-**Estado: Fases 0–4 del documento 02 terminadas. Sigue la Fase 5 (lectores de datos Nevada / Grand Korea Leisure).**
+**Estado: Fases 0–5 (y 5A) del documento 02 terminadas. Sigue la Fase 6 (calibración).**
 
 Cómo ejecutar: desde `backend/`, `.venv/bin/python -m casino.piso` (autochequeo) y `.venv/bin/python app.py` (API en :5000); `cd frontend && npm run dev` (:5173). Scripts sueltos necesitan `PYTHONPATH=.` desde `backend/`.
 
@@ -56,11 +56,33 @@ Detalle y snippets en `hold_juegos.md`.
 - Hold empírico del piso (10 días): tragamonedas 7.14%, ruleta 1.77%, dados 6.07%, blackjack 0.39%.
 - **Hallazgos para el GA:** (1) blackjack y ruleta dejan muy poco por apuesta frente a tragamonedas y dados; el GA tenderá a quitarles mesas, y en Nevada son los juegos con más win por unidad, así que la calibración (Fase 6) tendrá que revisar apuestas, ritmo de juego o reglas; (2) el ingreso diario es muy ruidoso (con semilla 1 la ruleta perdió 1,221 ese día; el ingreso total va de ~88,000 a ~160,000 según la semilla), lo que confirma la necesidad de réplicas y números aleatorios comunes en el fitness; (3) el win % de mesas de Nevada es sobre el drop y no se compara con la ventaja por apuesta: solo tragamonedas es comparable.
 
+## Fase 5 y 5A — Lectores de datos
+
+Detalle, etiquetas y comandos en `datos/README.md`. Scripts en `src/datos/` (solo biblioteca estándar + `pdftotext`).
+
+- **Estructura:** `datos/crudos/{nevada,gkl}/`, `datos/procesados/`, `src/datos/`.
+- **Nevada:** `descargar_nevada.py` bajó 2023-01 a 2024-12 (24 meses) y 2021-09. Los PDF no se versionan (`.gitignore`), se regeneran con el script. Desde 2025 el sitio redirige a `www.gaming.nv.gov/siteassets/...` y varios meses dan 404, por eso se usó 2023-2024.
+- **`nevada_a_csv.py`:** el script del documento 02 no funcionaba tal cual: (1) con `pdftotext -layout` las columnas salen revueltas; se cambió a `-raw`, que deja cada juego en una línea con sus 15 números; (2) el bloque estatal está en la página 4, no en la 1; se leen las páginas 1 a 6.
+- **Punto de control 5A cumplido:** septiembre 2021 reproduce exactamente la tabla de verificación (47.69 / 114.89 / 83.81 / 6.37 miles por unidad al mes; mezcla 67.4%). 1,797 filas, 24 juegos por mes (Pai Gow falta en 2023-04 por traer 14 números; no se usa).
+- **`nevada_referencia.py`:** `nevada_referencia.csv` con calibración = 2023 y validación = 2024, para blackjack, ruleta, dados y tragamonedas: mezcla de ingreso (sobre el total y sobre los 4 juegos), win por unidad al mes, unidades por local y win percent, con la desviación mensual. Cuadra con la fila "12 meses" del informe de diciembre 2023.
+
+| Métrica (2023 → 2024) | Blackjack | Ruleta | Dados | Tragamonedas |
+|---|---|---|---|---|
+| Win por unidad al mes (miles USD) | 55.3 → 55.4 | 88.9 → 84.1 | 122.3 → 114.8 | 6.87 → 6.89 |
+| Mezcla dentro de los 4 juegos | 10.6% → 10.5% | 3.7% → 3.5% | 3.7% → 3.5% | 82.0% → 82.5% |
+| Unidades por local | 17.8 → 18.1 | 4.4 → 4.5 | 3.1 → 3.3 | 401 → 407 |
+| Win % | 14.8 → 14.3 (drop) | 19.8 → 17.3 (drop) | 16.7 → 16.3 (drop) | 7.17 → 7.21 |
+
+- **Grand Korea Leisure (`gkl_a_csv.py`):** confirmado CP949, 11 columnas, las 5 de edad son conteos enteros (sin vacíos ni negativos), 3 sucursales (Coex, Dragon City, Lotte Busan), 2015-01-01 a 2026-06-23, sin duplicados. Visitantes diarios = suma de las columnas de edad. Se excluyen **2020-2022**, no solo 2020-2021: 2022 promedió 1,502 visitantes/día, 35% de 2019. Promedios diarios (3 sucursales): 2023 = 2,331, 2024 = 2,702.
+- Factores por día de la semana (3 sucursales, 2023 → 2024): lun 0.94/0.94, mar 0.87/0.93, mié 0.85/0.88, jue 0.86/0.87, vie 0.97/0.98, sáb 1.30/1.23, dom 1.21/1.16. Patrón estable: sirve para calibrar con 2023 y validar con 2024.
+- **Kangwon Land:** la página de data.go.kr da 404; se omite, como permite el documento 02.
+- **Hallazgos para la Fase 6:** (1) por unidad, dados > ruleta > blackjack ≫ tragamonedas en Nevada, al revés de lo que hoy produce el simulador (ver Fase 4): la calibración debe acercar el win por mesa; (2) el 82% del win de los 4 juegos es de tragamonedas, con ~400 máquinas por cada ~26 mesas por local; (3) GKL no tiene horas: el perfil horario sigue siendo supuesto, solo se calibra el nivel diario y el factor por día.
+
 ## Cómo se trabajó
 
 Orquestación con Claude Code: un agente orquestador (plan, git, verificación, esta bitácora) y agentes Claude Sonnet para el código de las Fases 2, 3 y 4. Declarar este uso de IA en el informe.
 
 ## Siguiente
 
-1. Fase 5/5A: `datos/crudos/`, script `nevada_a_csv.py` (requiere `pdftotext`), lector del CSV de Grand Korea Leisure (el archivo no es UTF-8, probablemente CP949; columnas de edad parecen conteos). Los archivos están en `~/Downloads` (`2021Sep-gri.pdf` y el CSV), aún no copiados al repo.
-2. Fase 6: calibración. Fase 7: GA. Luego experimentos, gráficas, UI e informe.
+1. Fase 6: calibración con `datos/procesados/nevada_referencia.csv` y `gkl_dia_semana.csv` (2023 calibra, 2024 valida).
+2. Fase 7: GA. Luego experimentos, gráficas, UI e informe.

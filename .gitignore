@@ -13,3 +13,9 @@ frontend/dist/
 # Claude Code
 .claude/settings.local.json
 CLAUDE.local.md
+
+# Datos crudos que se descargan con src/datos/descargar_nevada.py
+datos/crudos/nevada/*.pdf
+
+# Material local del equipo
+docs para no commitear/
