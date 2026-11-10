@@ -97,10 +97,6 @@ Detalle en `genetico.md`. Script `src/optimizacion/genetico.py`, pruebas `tests/
 - **Resultado:** base 100/4/1/1 → mejorada **84/5/1/2**: ingreso +5.5% (IC95 +11.6k a +91.2k), abandono 8.78% → 9.36%. Área 142 comprobada por código.
 - Con la calibración por juego el GA llega al **mismo reparto**, mejora +4.7% pero no significativa con 30 réplicas.
 
-## Cómo se trabajó
-
-Orquestación con Claude Code: un agente orquestador (plan, git, verificación, esta bitácora) y agentes Claude Sonnet para el código de las Fases 2, 3 y 4. Las Fases 6 y 7 (diseño de la calibración, cambios al motor, GA, pruebas y documentos) las hizo Claude Code (Opus) directamente. Declarar este uso de IA en el informe.
-
 ## Siguiente
 
 1. Fase 8: experimentos con `escenario.simular` (base, mejorada 84/5/1/2, llegadas +20%, paciencia 50–150%, áreas por unidad, escala por juego), 30+ réplicas; considerar 100 para base vs mejorada.
